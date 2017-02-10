@@ -21,7 +21,8 @@ public class ExtractDownloadLinks {
             List<YoutubeVideoDownload> list = parser.extractLinks(info);
 
             for (YoutubeVideoDownload d : list) {
-                System.out.println(d.stream + " " + d.url);
+                // FIXME: [jgolda] remove this !@#$% sys out print
+                System.out.println(d.getStream() + " " + d.getUrl());
             }
         } catch (Exception e) {
             e.printStackTrace();

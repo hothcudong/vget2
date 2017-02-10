@@ -3,12 +3,9 @@ package com.github.serserser.vget2.vhs;
 import java.net.URL;
 
 import com.github.serserser.vget2.info.VideoInfo;
+import com.github.serserser.vget2.vhs.vimeo.VimeoQuality;
 
 public class VimeoInfo extends VideoInfo {
-    // keep it in order hi->lo
-    public enum VimeoQuality {
-        pHi, pLow
-    }
 
     private VimeoQuality vq;
 

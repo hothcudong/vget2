@@ -34,23 +34,23 @@ public class YouTubeQParser extends YouTubeParser {
             throw new DownloadRetry("empty video download list," + " wait until youtube will process the video");
         }
 
-        Collections.sort(sNextVideoURL, new VideoContentFirstComparator());
+        Collections.sort(sNextVideoURL, new YoutubeVideoContentFirstComparator());
 
         for (int i = 0; i < sNextVideoURL.size(); i++) {
             YoutubeVideoDownload v = sNextVideoURL.get(i);
 
             boolean found = true;
 
-            StreamCombined vq = (StreamCombined) v.stream;
+            StreamCombined vq = (StreamCombined) v.getStream();
 
             found &= q.equals(vq.vq);
 
             if (found) {
                 YouTubeInfo yinfo = (YouTubeInfo) vinfo;
                 yinfo.setStreamInfo(vq);
-                VideoFileInfo info = new VideoFileInfo(v.url);
+                VideoFileInfo info = new VideoFileInfo(v.getUrl());
                 vinfo.setInfo(Arrays.asList(info));
-                vinfo.setSource(v.url);
+                vinfo.setSource(v.getUrl());
                 return vinfo.getInfo();
             }
         }

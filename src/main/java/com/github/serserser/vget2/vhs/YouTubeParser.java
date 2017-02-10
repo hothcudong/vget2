@@ -56,34 +56,29 @@ public class YouTubeParser extends VGetParser {
 
             try {
                 streamCapture(sNextVideoURL, info, stop, notify);
-            } catch (DownloadError e) {
+            } catch ( DownloadError e ) {
                 try {
                     extractEmbedded(sNextVideoURL, info, stop, notify);
-                } catch (EmbeddingDisabled ignore) {
+                } catch ( EmbeddingDisabled ignore ) {
                     throw e;
                 }
             }
             return sNextVideoURL;
-        } catch (RuntimeException e) {
+        } catch ( RuntimeException e ) {
             throw e;
-        } catch (Exception e) {
+        } catch ( Exception e ) {
             throw new RuntimeException(e);
         }
     }
 
     /**
      * do not allow to download age restricted videos
-     * 
-     * @param sNextVideoURL
-     *            url list to download
-     * @param info
-     *            download info
-     * @param stop
-     *            stop flag
-     * @param notify
-     *            notify object
-     * @throws Exception
-     *             download error
+     *
+     * @param sNextVideoURL url list to download
+     * @param info          download info
+     * @param stop          stop flag
+     * @param notify        notify object
+     * @throws Exception download error
      */
     public void streamCapture(List<YoutubeVideoDownload> sNextVideoURL, final YouTubeInfo info, final AtomicBoolean stop,
                               final Runnable notify) throws Exception {
@@ -113,11 +108,9 @@ public class YouTubeParser extends VGetParser {
 
     /**
      * Add resolution video for specific youtube link.
-     * 
-     * @param sNextVideoURL
-     *            download urls
-     * @param url
-     *            download source url
+     *
+     * @param sNextVideoURL download urls
+     * @param url           download source url
      */
     public void filter(List<YoutubeVideoDownload> sNextVideoURL, String itag, URL url) {
         Integer i = Integer.decode(itag);
@@ -214,14 +207,14 @@ public class YouTubeParser extends VGetParser {
         {
             Pattern u = Pattern.compile("youtube.com/watch?.*v=([^&]*)");
             Matcher um = u.matcher(url.toString());
-            if (um.find())
+            if ( um.find() )
                 return um.group(1);
         }
 
         {
             Pattern u = Pattern.compile("youtube.com/v/([^&]*)");
             Matcher um = u.matcher(url.toString());
-            if (um.find())
+            if ( um.find() )
                 return um.group(1);
         }
 
@@ -230,7 +223,7 @@ public class YouTubeParser extends VGetParser {
 
     /**
      * allows to download age restricted videos
-     * 
+     *
      * @param info
      * @param stop
      * @param notify
@@ -239,7 +232,7 @@ public class YouTubeParser extends VGetParser {
     public void extractEmbedded(List<YoutubeVideoDownload> sNextVideoURL, final YouTubeInfo info, final AtomicBoolean stop,
                                 final Runnable notify) throws Exception {
         String id = extractId(info.getWeb());
-        if (id == null) {
+        if ( id == null ) {
             throw new RuntimeException("unknown url");
         }
 
@@ -271,11 +264,11 @@ public class YouTubeParser extends VGetParser {
 
         Map<String, String> map = getQueryMap(qs);
 
-        if (map.get("status").equals("fail")) {
+        if ( map.get("status").equals("fail") ) {
             String r = URLDecoder.decode(map.get("reason"), WGet.UTF8);
-            if (map.get("errorcode").equals("150"))
+            if ( map.get("errorcode").equals("150") )
                 throw new EmbeddingDisabled("error code 150");
-            if (map.get("errorcode").equals("100"))
+            if ( map.get("errorcode").equals("100") )
                 throw new VideoDeleted("error code 100");
 
             throw new DownloadError(r);
@@ -301,14 +294,14 @@ public class YouTubeParser extends VGetParser {
         try {
             Pattern title = Pattern.compile("itemprop=\"thumbnailUrl\" href=\"(.*)\"");
             Matcher titleMatch = title.matcher(html);
-            if (titleMatch.find()) {
+            if ( titleMatch.find() ) {
                 String sline = titleMatch.group(1);
                 sline = StringEscapeUtils.unescapeHtml4(sline);
                 info.setIcon(new URL(sline));
             }
-        } catch (RuntimeException e) {
+        } catch ( RuntimeException e ) {
             throw e;
-        } catch (Exception e) {
+        } catch ( Exception e ) {
             throw new RuntimeException(e);
         }
     }
@@ -318,13 +311,13 @@ public class YouTubeParser extends VGetParser {
             HashMap<String, String> map = new HashMap<String, String>();
             qs = qs.trim();
             String[] pairs = qs.split("&");
-            for (String pair : pairs) {
+            for ( String pair : pairs ) {
                 int idx = pair.indexOf("=");
                 map.put(URLDecoder.decode(pair.substring(0, idx), WGet.UTF8),
                         URLDecoder.decode(pair.substring(idx + 1), WGet.UTF8));
             }
             return map;
-        } catch (UnsupportedEncodingException e) {
+        } catch ( UnsupportedEncodingException e ) {
             throw new RuntimeException(qs, e);
         }
     }
@@ -334,14 +327,14 @@ public class YouTubeParser extends VGetParser {
         {
             Pattern age = Pattern.compile("(verify_age)");
             Matcher ageMatch = age.matcher(html);
-            if (ageMatch.find())
+            if ( ageMatch.find() )
                 throw new AgeException();
         }
 
         {
             Pattern age = Pattern.compile("(unavailable-player)");
             Matcher ageMatch = age.matcher(html);
-            if (ageMatch.find())
+            if ( ageMatch.find() )
                 throw new VideoUnavailablePlayer();
         }
 
@@ -349,7 +342,7 @@ public class YouTubeParser extends VGetParser {
         {
             Pattern playerURL = Pattern.compile("(//.*?/player-[\\w\\d\\-]+\\/.*\\.js)");
             Matcher playerVersionMatch = playerURL.matcher(html);
-            if (playerVersionMatch.find()) {
+            if ( playerVersionMatch.find() ) {
                 info.setPlayerURI(new URI("https:" + playerVersionMatch.group(1)));
             }
         }
@@ -358,14 +351,14 @@ public class YouTubeParser extends VGetParser {
         {
             Pattern urlencod = Pattern.compile("\"url_encoded_fmt_stream_map\":\"([^\"]*)\"");
             Matcher urlencodMatch = urlencod.matcher(html);
-            if (urlencodMatch.find()) {
+            if ( urlencodMatch.find() ) {
                 String url_encoded_fmt_stream_map;
                 url_encoded_fmt_stream_map = urlencodMatch.group(1);
 
                 // normal embedded video, unable to grab age restricted videos
                 Pattern encod = Pattern.compile("url=(.*)");
                 Matcher encodMatch = encod.matcher(url_encoded_fmt_stream_map);
-                if (encodMatch.find()) {
+                if ( encodMatch.find() ) {
                     String sline = encodMatch.group(1);
 
                     extractUrlEncodedVideos(sNextVideoURL, sline, info, stop, notify);
@@ -374,17 +367,17 @@ public class YouTubeParser extends VGetParser {
                 // stream video
                 Pattern encodStream = Pattern.compile("stream=(.*)");
                 Matcher encodStreamMatch = encodStream.matcher(url_encoded_fmt_stream_map);
-                if (encodStreamMatch.find()) {
+                if ( encodStreamMatch.find() ) {
                     String sline = encodStreamMatch.group(1);
 
                     String[] urlStrings = sline.split("stream=");
 
-                    for (String urlString : urlStrings) {
+                    for ( String urlString : urlStrings ) {
                         urlString = StringEscapeUtils.unescapeJava(urlString);
 
                         Pattern link = Pattern.compile("(sparams.*)&itag=(\\d+)&.*&conn=rtmpe(.*),");
                         Matcher linkMatch = link.matcher(urlString);
-                        if (linkMatch.find()) {
+                        if ( linkMatch.find() ) {
 
                             String sparams = linkMatch.group(1);
                             String itag = linkMatch.group(2);
@@ -405,14 +398,14 @@ public class YouTubeParser extends VGetParser {
         {
             Pattern urlencod = Pattern.compile("\"adaptive_fmts\":\\s*\"([^\"]*)\"");
             Matcher urlencodMatch = urlencod.matcher(html);
-            if (urlencodMatch.find()) {
+            if ( urlencodMatch.find() ) {
                 String url_encoded_fmt_stream_map;
                 url_encoded_fmt_stream_map = urlencodMatch.group(1);
 
                 // normal embedded video, unable to grab age restricted videos
                 Pattern encod = Pattern.compile("url=(.*)");
                 Matcher encodMatch = encod.matcher(url_encoded_fmt_stream_map);
-                if (encodMatch.find()) {
+                if ( encodMatch.find() ) {
                     String sline = encodMatch.group(1);
 
                     extractUrlEncodedVideos(sNextVideoURL, sline, info, stop, notify);
@@ -421,17 +414,17 @@ public class YouTubeParser extends VGetParser {
                 // stream video
                 Pattern encodStream = Pattern.compile("stream=(.*)");
                 Matcher encodStreamMatch = encodStream.matcher(url_encoded_fmt_stream_map);
-                if (encodStreamMatch.find()) {
+                if ( encodStreamMatch.find() ) {
                     String sline = encodStreamMatch.group(1);
 
                     String[] urlStrings = sline.split("stream=");
 
-                    for (String urlString : urlStrings) {
+                    for ( String urlString : urlStrings ) {
                         urlString = StringEscapeUtils.unescapeJava(urlString);
 
                         Pattern link = Pattern.compile("(sparams.*)&itag=(\\d+)&.*&conn=rtmpe(.*),");
                         Matcher linkMatch = link.matcher(urlString);
-                        if (linkMatch.find()) {
+                        if ( linkMatch.find() ) {
 
                             String sparams = linkMatch.group(1);
                             String itag = linkMatch.group(2);
@@ -451,7 +444,7 @@ public class YouTubeParser extends VGetParser {
         {
             Pattern title = Pattern.compile("<meta name=\"title\" content=(.*)");
             Matcher titleMatch = title.matcher(html);
-            if (titleMatch.find()) {
+            if ( titleMatch.find() ) {
                 String sline = titleMatch.group(1);
                 String name = sline.replaceFirst("<meta name=\"title\" content=", "").trim();
                 name = StringUtils.strip(name, "\">");
@@ -459,7 +452,7 @@ public class YouTubeParser extends VGetParser {
                 info.setTitle(name);
             }
         }
-        if (info.getTitle() == null)
+        if ( info.getTitle() == null )
             throw new DownloadEmptyTitle("Empty title"); // some times youtube return strange html, cause this error
     }
 
@@ -467,7 +460,7 @@ public class YouTubeParser extends VGetParser {
                                         AtomicBoolean stop, Runnable notify) throws Exception {
         String[] urlStrings = sline.split("url=");
 
-        for (String urlString : urlStrings) {
+        for ( String urlString : urlStrings ) {
             urlString = StringEscapeUtils.unescapeJava(urlString);
 
             String urlFull = URLDecoder.decode(urlString, WGet.UTF8);
@@ -478,7 +471,7 @@ public class YouTubeParser extends VGetParser {
                 {
                     Pattern link = Pattern.compile("([^&,]*)[&,]");
                     Matcher linkMatch = link.matcher(urlString);
-                    if (linkMatch.find()) {
+                    if ( linkMatch.find() ) {
                         url = linkMatch.group(1);
                         url = URLDecoder.decode(url, WGet.UTF8);
                     }
@@ -488,35 +481,35 @@ public class YouTubeParser extends VGetParser {
                 {
                     Pattern link = Pattern.compile("itag=(\\d+)");
                     Matcher linkMatch = link.matcher(urlFull);
-                    if (linkMatch.find()) {
+                    if ( linkMatch.find() ) {
                         itag = linkMatch.group(1);
                     }
                 }
 
                 String sig = null;
 
-                if (sig == null) {
+                if ( sig == null ) {
                     Pattern link = Pattern.compile("&signature=([^&,]*)");
                     Matcher linkMatch = link.matcher(urlFull);
-                    if (linkMatch.find()) {
+                    if ( linkMatch.find() ) {
                         sig = linkMatch.group(1);
                     }
                 }
 
-                if (sig == null) {
+                if ( sig == null ) {
                     Pattern link = Pattern.compile("sig=([^&,]*)");
                     Matcher linkMatch = link.matcher(urlFull);
-                    if (linkMatch.find()) {
+                    if ( linkMatch.find() ) {
                         sig = linkMatch.group(1);
                     }
                 }
 
-                if (sig == null) {
+                if ( sig == null ) {
                     Pattern link = Pattern.compile("[&,]s=([^&,]*)");
                     Matcher linkMatch = link.matcher(urlFull);
-                    if (linkMatch.find()) {
+                    if ( linkMatch.find() ) {
                         sig = linkMatch.group(1);
-                        if (info.getPlayerURI() == null) {
+                        if ( info.getPlayerURI() == null ) {
                             SignatureDecryptor ss = new SignatureDecryptor(sig);
                             sig = ss.decrypt();
                         } else {
@@ -526,12 +519,12 @@ public class YouTubeParser extends VGetParser {
                     }
                 }
 
-                if (url != null && itag != null && sig != null) {
+                if ( url != null && itag != null && sig != null ) {
                     try {
                         url += "&signature=" + sig;
                         filter(sNextVideoURL, itag, new URL(url));
                         continue;
-                    } catch (MalformedURLException e) {
+                    } catch ( MalformedURLException e ) {
                         // ignore bad urls
                     }
                 }
@@ -543,7 +536,7 @@ public class YouTubeParser extends VGetParser {
     public List<VideoFileInfo> extract(VideoInfo vinfo, AtomicBoolean stop, Runnable notify) {
         List<YoutubeVideoDownload> videos = extractLinks((YouTubeInfo) vinfo, stop, notify);
 
-        if (videos.size() == 0) {
+        if ( videos.size() == 0 ) {
             // rare error:
             //
             // The live recording you're trying to play is still being processed
@@ -555,32 +548,32 @@ public class YouTubeParser extends VGetParser {
 
         List<YoutubeVideoDownload> audios = new ArrayList<YoutubeVideoDownload>();
 
-        for (int i = videos.size() - 1; i >= 0; i--) {
-            if (videos.get(i).stream == null) {
+        for ( int i = videos.size() - 1; i >= 0; i-- ) {
+            if ( videos.get(i).getStream() == null ) {
                 videos.remove(i);
-            } else if ((videos.get(i).stream instanceof StreamAudio)) {
+            } else if ( (videos.get(i).getStream() instanceof StreamAudio) ) {
                 audios.add(videos.remove(i));
             }
         }
 
-        videos.sort(new VideoContentFirstComparator());
-        audios.sort(new VideoContentFirstComparator());
+        videos.sort(new YoutubeVideoContentFirstComparator());
+        audios.sort(new YoutubeVideoContentFirstComparator());
 
-        for (int i = 0; i < videos.size();) {
+        for ( int i = 0; i < videos.size(); ) {
             YoutubeVideoDownload v = videos.get(i);
 
             YouTubeInfo yinfo = (YouTubeInfo) vinfo;
-            yinfo.setStreamInfo(v.stream);
+            yinfo.setStreamInfo(v.getStream());
 
-            VideoFileInfo info = new VideoFileInfo(v.url);
+            VideoFileInfo info = new VideoFileInfo(v.getUrl());
 
-            if (v.stream instanceof StreamCombined ) {
+            if ( v.getStream()instanceof StreamCombined ) {
                 vinfo.setInfo(Arrays.asList(info));
             }
 
-            if (v.stream instanceof StreamVideo ) {
-                if (audios.size() > 0) {
-                    VideoFileInfo info2 = new VideoFileInfo(audios.get(0).url); // take first (highest quality)
+            if ( v.getStream() instanceof StreamVideo ) {
+                if ( audios.size() > 0 ) {
+                    VideoFileInfo info2 = new VideoFileInfo(audios.get(0).getUrl()); // take first (highest quality)
                     vinfo.setInfo(Arrays.asList(info, info2));
                 } else {
                     // no audio stream?
@@ -588,12 +581,12 @@ public class YouTubeParser extends VGetParser {
                 }
             }
 
-            vinfo.setSource(v.url);
+            vinfo.setSource(v.getUrl());
             return vinfo.getInfo();
         }
 
-        for (int i = 0; i < audios.size();) { // only audio mode?
-            VideoFileInfo info = new VideoFileInfo(audios.get(i).url);
+        for ( int i = 0; i < audios.size(); ) { // only audio mode?
+            VideoFileInfo info = new VideoFileInfo(audios.get(i).getUrl());
             vinfo.setInfo(Arrays.asList(info));
 
             vinfo.setSource(info.getSource());

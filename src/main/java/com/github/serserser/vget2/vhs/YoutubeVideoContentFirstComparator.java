@@ -7,19 +7,19 @@ import com.github.serserser.vget2.vhs.youtubeVideoParams.StreamVideo;
 
 import java.util.Comparator;
 
-public class VideoContentFirstComparator implements Comparator<YoutubeVideoDownload> {
+public class YoutubeVideoContentFirstComparator implements Comparator<YoutubeVideoDownload> {
     int ordinal(YoutubeVideoDownload o1) {
-        if (o1.stream instanceof StreamCombined ) {
-            StreamCombined c1 = (StreamCombined) o1.stream;
+        if (o1.getStream() instanceof StreamCombined ) {
+            StreamCombined c1 = (StreamCombined) o1.getStream();
             return c1.vq.ordinal();
         }
-        if (o1.stream instanceof StreamVideo ) {
-            StreamVideo c1 = (StreamVideo) o1.stream;
+        if (o1.getStream() instanceof StreamVideo ) {
+            StreamVideo c1 = (StreamVideo) o1.getStream();
             return c1.vq.ordinal();
         }
-        if (o1.stream instanceof StreamAudio ) {
-            StreamAudio c1 = (StreamAudio) o1.stream;
-            return c1.aq.ordinal();
+        if (o1.getStream() instanceof StreamAudio ) {
+            StreamAudio c1 = (StreamAudio) o1.getStream();
+            return c1.getAq().ordinal();
         }
         throw new RuntimeException("bad video array type");
     }

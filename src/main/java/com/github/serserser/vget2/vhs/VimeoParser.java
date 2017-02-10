@@ -5,84 +5,26 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.github.serserser.vget2.info.VGetParser;
 import com.github.serserser.vget2.info.VideoFileInfo;
+import com.github.serserser.vget2.vhs.vimeo.VimeoVideoDownload;
+import com.github.serserser.vget2.vhs.vimeo.downloadInfo.VimeoData;
 import org.apache.commons.lang3.StringEscapeUtils;
 
 import com.github.serserser.vget2.info.VideoInfo;
 import com.github.serserser.vget2.info.VideoInfo.States;
-import com.github.serserser.vget2.vhs.VimeoInfo.VimeoQuality;
+import com.github.serserser.vget2.vhs.vimeo.VimeoQuality;
 import com.github.axet.wget.WGet;
 import com.github.axet.wget.WGet.HtmlLoader;
 import com.github.axet.wget.info.ex.DownloadError;
 import com.google.gson.Gson;
 
 public class VimeoParser extends VGetParser {
-
-    public static class VideoDownload {
-        public VimeoQuality vq;
-        public URL url;
-
-        public VideoDownload(VimeoQuality vq, URL u) {
-            this.vq = vq;
-            this.url = u;
-        }
-    }
-
-    public static class VideoContentFirst implements Comparator<VideoDownload> {
-        @Override
-        public int compare(VideoDownload o1, VideoDownload o2) {
-            Integer i1 = o1.vq.ordinal();
-            Integer i2 = o2.vq.ordinal();
-            Integer ic = i1.compareTo(i2);
-
-            return ic;
-        }
-    }
-
-    public static class VimeoData {
-        public VimeoRequest request;
-        public VimeoVideo video;
-    }
-
-    public static class VimeoVideo {
-        public Map<String, String> thumbs;
-        public String title;
-    }
-
-    public static class VimeoRequest {
-        public String signature;
-        public String session;
-        public long timestamp;
-        public long expires;
-        public VimeoFiles files;
-    }
-
-    public static class VimeoFiles {
-        public ArrayList<String> codecs;
-        public VidemoCodec h264;
-    }
-
-    public static class VidemoCodec {
-        public VideoDownloadLink hd;
-        public VideoDownloadLink sd;
-        public VideoDownloadLink mobile;
-    }
-
-    public static class VideoDownloadLink {
-        public String url;
-        public int height;
-        public int width;
-        public String id;
-        public int bitrate;
-    }
 
     public VimeoParser() {
     }
@@ -113,8 +55,8 @@ public class VimeoParser extends VGetParser {
         return null;
     }
 
-    public List<VideoDownload> extractLinks(final VideoInfo info, final AtomicBoolean stop, final Runnable notify) {
-        List<VideoDownload> list = new ArrayList<VideoDownload>();
+    public List<VimeoVideoDownload> extractLinks(final VideoInfo info, final AtomicBoolean stop, final Runnable notify) {
+        List<VimeoVideoDownload> list = new ArrayList<VimeoVideoDownload>();
 
         try {
             String id;
@@ -183,15 +125,15 @@ public class VimeoParser extends VGetParser {
 
             VimeoData data = new Gson().fromJson(htmlConfig, VimeoData.class);
 
-            String icon = data.video.thumbs.values().iterator().next();
+            String icon = data.getVideo().getThumbs().values().iterator().next();
 
-            info.setTitle(data.video.title);
+            info.setTitle(data.getVideo().getTitle());
 
-            if (data.request.files.h264.hd != null)
-                list.add(new VideoDownload(VimeoQuality.pHi, new URL(data.request.files.h264.hd.url)));
+            if (data.getRequest().getFiles().getH264().getHd() != null)
+                list.add(new VimeoVideoDownload(VimeoQuality.pHi, new URL(data.getRequest().getFiles().getH264().getHd().getUrl())));
 
-            if (data.request.files.h264.sd != null)
-                list.add(new VideoDownload(VimeoQuality.pLow, new URL(data.request.files.h264.sd.url)));
+            if (data.getRequest().getFiles().getH264().getSd() != null)
+                list.add(new VimeoVideoDownload(VimeoQuality.pLow, new URL(data.getRequest().getFiles().getH264().getSd().getUrl())));
 
             info.setIcon(new URL(icon));
         } catch (MalformedURLException e) {
@@ -203,18 +145,18 @@ public class VimeoParser extends VGetParser {
 
     @Override
     public List<VideoFileInfo> extract(VideoInfo vinfo, AtomicBoolean stop, Runnable notify) {
-        List<VideoDownload> sNextVideoURL = extractLinks(vinfo, stop, notify);
+        List<VimeoVideoDownload> sNextVideoURL = extractLinks(vinfo, stop, notify);
 
-        Collections.sort(sNextVideoURL, new VideoContentFirst());
+        Collections.sort(sNextVideoURL, new VimeoVideoContentFirstComparator());
 
         for (int i = 0; i < sNextVideoURL.size();) {
-            VideoDownload v = sNextVideoURL.get(i);
+            VimeoVideoDownload v = sNextVideoURL.get(i);
 
             VimeoInfo yinfo = (VimeoInfo) vinfo;
-            yinfo.setVideoQuality(v.vq);
-            VideoFileInfo info = new VideoFileInfo(v.url);
+            yinfo.setVideoQuality(v.getVq());
+            VideoFileInfo info = new VideoFileInfo(v.getUrl());
             vinfo.setInfo(Arrays.asList(info));
-            vinfo.setSource(v.url);
+            vinfo.setSource(v.getUrl());
             return vinfo.getInfo();
         }
 
