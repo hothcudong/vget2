@@ -3,7 +3,7 @@ package com.github.serserser.vget2;
 import java.net.URL;
 import java.util.List;
 
-import com.github.serserser.vget2.vhs.VideoDownload;
+import com.github.serserser.vget2.vhs.youtube.YoutubeVideoDownload;
 import com.github.serserser.vget2.vhs.YouTubeInfo;
 import com.github.serserser.vget2.vhs.YouTubeParser;
 
@@ -18,9 +18,9 @@ public class ExtractDownloadLinks {
 
             YouTubeParser parser = new YouTubeParser();
 
-            List<VideoDownload> list = parser.extractLinks(info);
+            List<YoutubeVideoDownload> list = parser.extractLinks(info);
 
-            for (VideoDownload d : list) {
+            for (YoutubeVideoDownload d : list) {
                 System.out.println(d.stream + " " + d.url);
             }
         } catch (Exception e) {

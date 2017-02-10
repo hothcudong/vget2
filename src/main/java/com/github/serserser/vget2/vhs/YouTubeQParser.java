@@ -9,17 +9,20 @@ import com.github.serserser.vget2.info.VideoFileInfo;
 import com.github.serserser.vget2.info.VideoInfo;
 import com.github.axet.wget.info.ex.DownloadError;
 import com.github.axet.wget.info.ex.DownloadRetry;
+import com.github.serserser.vget2.vhs.youtube.YoutubeVideoDownload;
+import com.github.serserser.vget2.vhs.youtubeVideoParams.StreamCombined;
+import com.github.serserser.vget2.vhs.youtubeVideoParams.YoutubeQuality;
 
 public class YouTubeQParser extends YouTubeParser {
-    YouTubeInfo.YoutubeQuality q;
+    YoutubeQuality q;
 
-    public YouTubeQParser(YouTubeInfo.YoutubeQuality q) {
+    public YouTubeQParser(YoutubeQuality q) {
         this.q = q;
     }
 
     @Override
     public List<VideoFileInfo> extract(final VideoInfo vinfo, final AtomicBoolean stop, final Runnable notify) {
-        List<VideoDownload> sNextVideoURL = extractLinks((YouTubeInfo) vinfo, stop, notify);
+        List<YoutubeVideoDownload> sNextVideoURL = extractLinks((YouTubeInfo) vinfo, stop, notify);
 
         if (sNextVideoURL.size() == 0) {
             // rare error:
@@ -34,11 +37,11 @@ public class YouTubeQParser extends YouTubeParser {
         Collections.sort(sNextVideoURL, new VideoContentFirstComparator());
 
         for (int i = 0; i < sNextVideoURL.size(); i++) {
-            VideoDownload v = sNextVideoURL.get(i);
+            YoutubeVideoDownload v = sNextVideoURL.get(i);
 
             boolean found = true;
 
-            YouTubeInfo.StreamCombined vq = (YouTubeInfo.StreamCombined) v.stream;
+            StreamCombined vq = (StreamCombined) v.stream;
 
             found &= q.equals(vq.vq);
 

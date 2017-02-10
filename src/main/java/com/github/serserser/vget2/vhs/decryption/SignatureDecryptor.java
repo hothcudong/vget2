@@ -1,4 +1,4 @@
-package com.github.serserser.vget2.vhs;
+package com.github.serserser.vget2.vhs.decryption;
 
 public class SignatureDecryptor {
     public String sig;

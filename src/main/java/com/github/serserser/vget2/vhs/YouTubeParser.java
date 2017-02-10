@@ -18,10 +18,14 @@ import com.github.serserser.vget2.exceptions.DownloadEmptyTitle;
 import com.github.serserser.vget2.info.VGetParser;
 import com.github.serserser.vget2.info.VideoFileInfo;
 import com.github.serserser.vget2.info.VideoInfo;
+import com.github.serserser.vget2.vhs.decryption.Html5SignatureDecryptor;
+import com.github.serserser.vget2.vhs.decryption.SignatureDecryptor;
 import com.github.serserser.vget2.vhs.exceptions.AgeException;
 import com.github.serserser.vget2.vhs.exceptions.EmbeddingDisabled;
 import com.github.serserser.vget2.vhs.exceptions.VideoDeleted;
 import com.github.serserser.vget2.vhs.exceptions.VideoUnavailablePlayer;
+import com.github.serserser.vget2.vhs.youtube.YoutubeVideoDownload;
+import com.github.serserser.vget2.vhs.youtubeVideoParams.*;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -38,7 +42,7 @@ public class YouTubeParser extends VGetParser {
         return url.toString().contains("youtube.com");
     }
 
-    public List<VideoDownload> extractLinks(final YouTubeInfo info) {
+    public List<YoutubeVideoDownload> extractLinks(final YouTubeInfo info) {
         return extractLinks(info, new AtomicBoolean(), new Runnable() {
             @Override
             public void run() {
@@ -46,9 +50,9 @@ public class YouTubeParser extends VGetParser {
         });
     }
 
-    public List<VideoDownload> extractLinks(final YouTubeInfo info, final AtomicBoolean stop, final Runnable notify) {
+    public List<YoutubeVideoDownload> extractLinks(final YouTubeInfo info, final AtomicBoolean stop, final Runnable notify) {
         try {
-            List<VideoDownload> sNextVideoURL = new ArrayList<VideoDownload>();
+            List<YoutubeVideoDownload> sNextVideoURL = new ArrayList<YoutubeVideoDownload>();
 
             try {
                 streamCapture(sNextVideoURL, info, stop, notify);
@@ -81,8 +85,8 @@ public class YouTubeParser extends VGetParser {
      * @throws Exception
      *             download error
      */
-    public void streamCapture(List<VideoDownload> sNextVideoURL, final YouTubeInfo info, final AtomicBoolean stop,
-            final Runnable notify) throws Exception {
+    public void streamCapture(List<YoutubeVideoDownload> sNextVideoURL, final YouTubeInfo info, final AtomicBoolean stop,
+                              final Runnable notify) throws Exception {
         String html;
         html = WGet.getHtml(info.getWeb(), new WGet.HtmlLoader() {
             @Override
@@ -115,94 +119,94 @@ public class YouTubeParser extends VGetParser {
      * @param url
      *            download source url
      */
-    public void filter(List<VideoDownload> sNextVideoURL, String itag, URL url) {
+    public void filter(List<YoutubeVideoDownload> sNextVideoURL, String itag, URL url) {
         Integer i = Integer.decode(itag);
-        YouTubeInfo.StreamInfo vd = itagMap.get(i);
+        StreamInfo vd = itagMap.get(i);
 
-        sNextVideoURL.add(new VideoDownload(vd, url));
+        sNextVideoURL.add(new YoutubeVideoDownload(vd, url));
     }
 
     // http://en.wikipedia.org/wiki/YouTube#Quality_and_codecs
 
-    public static final Map<Integer, YouTubeInfo.StreamInfo> itagMap = new HashMap<Integer, YouTubeInfo.StreamInfo>() {
+    public static final Map<Integer, StreamInfo> itagMap = new HashMap<Integer, StreamInfo>() {
         private static final long serialVersionUID = -6925194111122038477L;
 
         {
-            put(120, new YouTubeInfo.StreamCombined(YouTubeInfo.Container.FLV, YouTubeInfo.Encoding.H264, YouTubeInfo.YoutubeQuality.p720, YouTubeInfo.Encoding.AAC,
-                    YouTubeInfo.AudioQuality.k128));
-            put(102, new YouTubeInfo.StreamCombined(YouTubeInfo.Container.WEBM, YouTubeInfo.Encoding.VP8, YouTubeInfo.YoutubeQuality.p720, YouTubeInfo.Encoding.VORBIS,
-                    YouTubeInfo.AudioQuality.k192));
-            put(101, new YouTubeInfo.StreamCombined(YouTubeInfo.Container.WEBM, YouTubeInfo.Encoding.VP8, YouTubeInfo.YoutubeQuality.p360, YouTubeInfo.Encoding.VORBIS,
-                    YouTubeInfo.AudioQuality.k192)); // webm
-            put(100, new YouTubeInfo.StreamCombined(YouTubeInfo.Container.WEBM, YouTubeInfo.Encoding.VP8, YouTubeInfo.YoutubeQuality.p360, YouTubeInfo.Encoding.VORBIS,
-                    YouTubeInfo.AudioQuality.k128)); // webm
-            put(85, new YouTubeInfo.StreamCombined(YouTubeInfo.Container.MP4, YouTubeInfo.Encoding.H264, YouTubeInfo.YoutubeQuality.p1080, YouTubeInfo.Encoding.AAC,
-                    YouTubeInfo.AudioQuality.k192)); // mp4
-            put(84, new YouTubeInfo.StreamCombined(YouTubeInfo.Container.MP4, YouTubeInfo.Encoding.H264, YouTubeInfo.YoutubeQuality.p720, YouTubeInfo.Encoding.AAC,
-                    YouTubeInfo.AudioQuality.k192)); // mp4
-            put(83, new YouTubeInfo.StreamCombined(YouTubeInfo.Container.MP4, YouTubeInfo.Encoding.H264, YouTubeInfo.YoutubeQuality.p240, YouTubeInfo.Encoding.AAC,
-                    YouTubeInfo.AudioQuality.k96)); // mp4
-            put(82, new YouTubeInfo.StreamCombined(YouTubeInfo.Container.MP4, YouTubeInfo.Encoding.H264, YouTubeInfo.YoutubeQuality.p360, YouTubeInfo.Encoding.AAC,
-                    YouTubeInfo.AudioQuality.k96)); // mp4
-            put(46, new YouTubeInfo.StreamCombined(YouTubeInfo.Container.WEBM, YouTubeInfo.Encoding.VP8, YouTubeInfo.YoutubeQuality.p1080, YouTubeInfo.Encoding.VORBIS,
-                    YouTubeInfo.AudioQuality.k192)); // webm
-            put(45, new YouTubeInfo.StreamCombined(YouTubeInfo.Container.WEBM, YouTubeInfo.Encoding.VP8, YouTubeInfo.YoutubeQuality.p720, YouTubeInfo.Encoding.VORBIS,
-                    YouTubeInfo.AudioQuality.k192)); // webm
-            put(44, new YouTubeInfo.StreamCombined(YouTubeInfo.Container.WEBM, YouTubeInfo.Encoding.VP8, YouTubeInfo.YoutubeQuality.p480, YouTubeInfo.Encoding.VORBIS,
-                    YouTubeInfo.AudioQuality.k128)); // webm
-            put(43, new YouTubeInfo.StreamCombined(YouTubeInfo.Container.WEBM, YouTubeInfo.Encoding.VP8, YouTubeInfo.YoutubeQuality.p360, YouTubeInfo.Encoding.VORBIS,
-                    YouTubeInfo.AudioQuality.k128)); // webm
-            put(38, new YouTubeInfo.StreamCombined(YouTubeInfo.Container.MP4, YouTubeInfo.Encoding.H264, YouTubeInfo.YoutubeQuality.p3072, YouTubeInfo.Encoding.AAC,
-                    YouTubeInfo.AudioQuality.k192)); // mp4
-            put(37, new YouTubeInfo.StreamCombined(YouTubeInfo.Container.MP4, YouTubeInfo.Encoding.H264, YouTubeInfo.YoutubeQuality.p1080, YouTubeInfo.Encoding.AAC,
-                    YouTubeInfo.AudioQuality.k192)); // mp4
-            put(36, new YouTubeInfo.StreamCombined(YouTubeInfo.Container.GP3, YouTubeInfo.Encoding.MP4, YouTubeInfo.YoutubeQuality.p240, YouTubeInfo.Encoding.AAC,
-                    YouTubeInfo.AudioQuality.k36)); // 3gp
-            put(35, new YouTubeInfo.StreamCombined(YouTubeInfo.Container.FLV, YouTubeInfo.Encoding.H264, YouTubeInfo.YoutubeQuality.p480, YouTubeInfo.Encoding.AAC,
-                    YouTubeInfo.AudioQuality.k128)); // flv
-            put(34, new YouTubeInfo.StreamCombined(YouTubeInfo.Container.FLV, YouTubeInfo.Encoding.H264, YouTubeInfo.YoutubeQuality.p360, YouTubeInfo.Encoding.AAC,
-                    YouTubeInfo.AudioQuality.k128)); // flv
-            put(22, new YouTubeInfo.StreamCombined(YouTubeInfo.Container.MP4, YouTubeInfo.Encoding.H264, YouTubeInfo.YoutubeQuality.p720, YouTubeInfo.Encoding.AAC,
-                    YouTubeInfo.AudioQuality.k192)); // mp4
-            put(18, new YouTubeInfo.StreamCombined(YouTubeInfo.Container.MP4, YouTubeInfo.Encoding.H264, YouTubeInfo.YoutubeQuality.p360, YouTubeInfo.Encoding.AAC,
-                    YouTubeInfo.AudioQuality.k96)); // mp4
-            put(17, new YouTubeInfo.StreamCombined(YouTubeInfo.Container.GP3, YouTubeInfo.Encoding.MP4, YouTubeInfo.YoutubeQuality.p144, YouTubeInfo.Encoding.AAC,
-                    YouTubeInfo.AudioQuality.k24)); // 3gp
-            put(6, new YouTubeInfo.StreamCombined(YouTubeInfo.Container.FLV, YouTubeInfo.Encoding.H263, YouTubeInfo.YoutubeQuality.p270, YouTubeInfo.Encoding.MP3,
-                    YouTubeInfo.AudioQuality.k64)); // flv
-            put(5, new YouTubeInfo.StreamCombined(YouTubeInfo.Container.FLV, YouTubeInfo.Encoding.H263, YouTubeInfo.YoutubeQuality.p240, YouTubeInfo.Encoding.MP3,
-                    YouTubeInfo.AudioQuality.k64)); // flv
+            put(120, new StreamCombined(Container.FLV, Encoding.H264, YoutubeQuality.p720, Encoding.AAC,
+                    AudioQuality.k128));
+            put(102, new StreamCombined(Container.WEBM, Encoding.VP8, YoutubeQuality.p720, Encoding.VORBIS,
+                    AudioQuality.k192));
+            put(101, new StreamCombined(Container.WEBM, Encoding.VP8, YoutubeQuality.p360, Encoding.VORBIS,
+                    AudioQuality.k192)); // webm
+            put(100, new StreamCombined(Container.WEBM, Encoding.VP8, YoutubeQuality.p360, Encoding.VORBIS,
+                    AudioQuality.k128)); // webm
+            put(85, new StreamCombined(Container.MP4, Encoding.H264, YoutubeQuality.p1080, Encoding.AAC,
+                    AudioQuality.k192)); // mp4
+            put(84, new StreamCombined(Container.MP4, Encoding.H264, YoutubeQuality.p720, Encoding.AAC,
+                    AudioQuality.k192)); // mp4
+            put(83, new StreamCombined(Container.MP4, Encoding.H264, YoutubeQuality.p240, Encoding.AAC,
+                    AudioQuality.k96)); // mp4
+            put(82, new StreamCombined(Container.MP4, Encoding.H264, YoutubeQuality.p360, Encoding.AAC,
+                    AudioQuality.k96)); // mp4
+            put(46, new StreamCombined(Container.WEBM, Encoding.VP8, YoutubeQuality.p1080, Encoding.VORBIS,
+                    AudioQuality.k192)); // webm
+            put(45, new StreamCombined(Container.WEBM, Encoding.VP8, YoutubeQuality.p720, Encoding.VORBIS,
+                    AudioQuality.k192)); // webm
+            put(44, new StreamCombined(Container.WEBM, Encoding.VP8, YoutubeQuality.p480, Encoding.VORBIS,
+                    AudioQuality.k128)); // webm
+            put(43, new StreamCombined(Container.WEBM, Encoding.VP8, YoutubeQuality.p360, Encoding.VORBIS,
+                    AudioQuality.k128)); // webm
+            put(38, new StreamCombined(Container.MP4, Encoding.H264, YoutubeQuality.p3072, Encoding.AAC,
+                    AudioQuality.k192)); // mp4
+            put(37, new StreamCombined(Container.MP4, Encoding.H264, YoutubeQuality.p1080, Encoding.AAC,
+                    AudioQuality.k192)); // mp4
+            put(36, new StreamCombined(Container.GP3, Encoding.MP4, YoutubeQuality.p240, Encoding.AAC,
+                    AudioQuality.k36)); // 3gp
+            put(35, new StreamCombined(Container.FLV, Encoding.H264, YoutubeQuality.p480, Encoding.AAC,
+                    AudioQuality.k128)); // flv
+            put(34, new StreamCombined(Container.FLV, Encoding.H264, YoutubeQuality.p360, Encoding.AAC,
+                    AudioQuality.k128)); // flv
+            put(22, new StreamCombined(Container.MP4, Encoding.H264, YoutubeQuality.p720, Encoding.AAC,
+                    AudioQuality.k192)); // mp4
+            put(18, new StreamCombined(Container.MP4, Encoding.H264, YoutubeQuality.p360, Encoding.AAC,
+                    AudioQuality.k96)); // mp4
+            put(17, new StreamCombined(Container.GP3, Encoding.MP4, YoutubeQuality.p144, Encoding.AAC,
+                    AudioQuality.k24)); // 3gp
+            put(6, new StreamCombined(Container.FLV, Encoding.H263, YoutubeQuality.p270, Encoding.MP3,
+                    AudioQuality.k64)); // flv
+            put(5, new StreamCombined(Container.FLV, Encoding.H263, YoutubeQuality.p240, Encoding.MP3,
+                    AudioQuality.k64)); // flv
 
-            put(133, new YouTubeInfo.StreamVideo(YouTubeInfo.Container.MP4, YouTubeInfo.Encoding.H264, YouTubeInfo.YoutubeQuality.p240));
-            put(134, new YouTubeInfo.StreamVideo(YouTubeInfo.Container.MP4, YouTubeInfo.Encoding.H264, YouTubeInfo.YoutubeQuality.p360));
-            put(135, new YouTubeInfo.StreamVideo(YouTubeInfo.Container.MP4, YouTubeInfo.Encoding.H264, YouTubeInfo.YoutubeQuality.p480));
-            put(136, new YouTubeInfo.StreamVideo(YouTubeInfo.Container.MP4, YouTubeInfo.Encoding.H264, YouTubeInfo.YoutubeQuality.p720));
-            put(137, new YouTubeInfo.StreamVideo(YouTubeInfo.Container.MP4, YouTubeInfo.Encoding.H264, YouTubeInfo.YoutubeQuality.p1080));
-            put(138, new YouTubeInfo.StreamVideo(YouTubeInfo.Container.MP4, YouTubeInfo.Encoding.H264, YouTubeInfo.YoutubeQuality.p2160));
-            put(160, new YouTubeInfo.StreamVideo(YouTubeInfo.Container.MP4, YouTubeInfo.Encoding.H264, YouTubeInfo.YoutubeQuality.p144));
-            put(242, new YouTubeInfo.StreamVideo(YouTubeInfo.Container.WEBM, YouTubeInfo.Encoding.VP9, YouTubeInfo.YoutubeQuality.p240));
-            put(243, new YouTubeInfo.StreamVideo(YouTubeInfo.Container.WEBM, YouTubeInfo.Encoding.VP9, YouTubeInfo.YoutubeQuality.p360));
-            put(244, new YouTubeInfo.StreamVideo(YouTubeInfo.Container.WEBM, YouTubeInfo.Encoding.VP9, YouTubeInfo.YoutubeQuality.p480));
-            put(247, new YouTubeInfo.StreamVideo(YouTubeInfo.Container.WEBM, YouTubeInfo.Encoding.VP9, YouTubeInfo.YoutubeQuality.p720));
-            put(248, new YouTubeInfo.StreamVideo(YouTubeInfo.Container.WEBM, YouTubeInfo.Encoding.VP9, YouTubeInfo.YoutubeQuality.p1080));
-            put(264, new YouTubeInfo.StreamVideo(YouTubeInfo.Container.MP4, YouTubeInfo.Encoding.H264, YouTubeInfo.YoutubeQuality.p1440));
-            put(271, new YouTubeInfo.StreamVideo(YouTubeInfo.Container.WEBM, YouTubeInfo.Encoding.VP9, YouTubeInfo.YoutubeQuality.p1440));
-            put(272, new YouTubeInfo.StreamVideo(YouTubeInfo.Container.WEBM, YouTubeInfo.Encoding.VP9, YouTubeInfo.YoutubeQuality.p2160));
-            put(278, new YouTubeInfo.StreamVideo(YouTubeInfo.Container.WEBM, YouTubeInfo.Encoding.VP9, YouTubeInfo.YoutubeQuality.p144));
-            put(298, new YouTubeInfo.StreamVideo(YouTubeInfo.Container.MP4, YouTubeInfo.Encoding.H264, YouTubeInfo.YoutubeQuality.p720));
-            put(299, new YouTubeInfo.StreamVideo(YouTubeInfo.Container.MP4, YouTubeInfo.Encoding.H264, YouTubeInfo.YoutubeQuality.p1080));
-            put(302, new YouTubeInfo.StreamVideo(YouTubeInfo.Container.WEBM, YouTubeInfo.Encoding.VP9, YouTubeInfo.YoutubeQuality.p720));
-            put(303, new YouTubeInfo.StreamVideo(YouTubeInfo.Container.WEBM, YouTubeInfo.Encoding.VP9, YouTubeInfo.YoutubeQuality.p1080));
+            put(133, new StreamVideo(Container.MP4, Encoding.H264, YoutubeQuality.p240));
+            put(134, new StreamVideo(Container.MP4, Encoding.H264, YoutubeQuality.p360));
+            put(135, new StreamVideo(Container.MP4, Encoding.H264, YoutubeQuality.p480));
+            put(136, new StreamVideo(Container.MP4, Encoding.H264, YoutubeQuality.p720));
+            put(137, new StreamVideo(Container.MP4, Encoding.H264, YoutubeQuality.p1080));
+            put(138, new StreamVideo(Container.MP4, Encoding.H264, YoutubeQuality.p2160));
+            put(160, new StreamVideo(Container.MP4, Encoding.H264, YoutubeQuality.p144));
+            put(242, new StreamVideo(Container.WEBM, Encoding.VP9, YoutubeQuality.p240));
+            put(243, new StreamVideo(Container.WEBM, Encoding.VP9, YoutubeQuality.p360));
+            put(244, new StreamVideo(Container.WEBM, Encoding.VP9, YoutubeQuality.p480));
+            put(247, new StreamVideo(Container.WEBM, Encoding.VP9, YoutubeQuality.p720));
+            put(248, new StreamVideo(Container.WEBM, Encoding.VP9, YoutubeQuality.p1080));
+            put(264, new StreamVideo(Container.MP4, Encoding.H264, YoutubeQuality.p1440));
+            put(271, new StreamVideo(Container.WEBM, Encoding.VP9, YoutubeQuality.p1440));
+            put(272, new StreamVideo(Container.WEBM, Encoding.VP9, YoutubeQuality.p2160));
+            put(278, new StreamVideo(Container.WEBM, Encoding.VP9, YoutubeQuality.p144));
+            put(298, new StreamVideo(Container.MP4, Encoding.H264, YoutubeQuality.p720));
+            put(299, new StreamVideo(Container.MP4, Encoding.H264, YoutubeQuality.p1080));
+            put(302, new StreamVideo(Container.WEBM, Encoding.VP9, YoutubeQuality.p720));
+            put(303, new StreamVideo(Container.WEBM, Encoding.VP9, YoutubeQuality.p1080));
 
-            put(139, new YouTubeInfo.StreamAudio(YouTubeInfo.Container.MP4, YouTubeInfo.Encoding.AAC, YouTubeInfo.AudioQuality.k48));
-            put(140, new YouTubeInfo.StreamAudio(YouTubeInfo.Container.MP4, YouTubeInfo.Encoding.AAC, YouTubeInfo.AudioQuality.k128));
-            put(141, new YouTubeInfo.StreamAudio(YouTubeInfo.Container.MP4, YouTubeInfo.Encoding.AAC, YouTubeInfo.AudioQuality.k256));
-            put(171, new YouTubeInfo.StreamAudio(YouTubeInfo.Container.WEBM, YouTubeInfo.Encoding.VORBIS, YouTubeInfo.AudioQuality.k128));
-            put(172, new YouTubeInfo.StreamAudio(YouTubeInfo.Container.WEBM, YouTubeInfo.Encoding.VORBIS, YouTubeInfo.AudioQuality.k192));
+            put(139, new StreamAudio(Container.MP4, Encoding.AAC, AudioQuality.k48));
+            put(140, new StreamAudio(Container.MP4, Encoding.AAC, AudioQuality.k128));
+            put(141, new StreamAudio(Container.MP4, Encoding.AAC, AudioQuality.k256));
+            put(171, new StreamAudio(Container.WEBM, Encoding.VORBIS, AudioQuality.k128));
+            put(172, new StreamAudio(Container.WEBM, Encoding.VORBIS, AudioQuality.k192));
 
-            put(249, new YouTubeInfo.StreamAudio(YouTubeInfo.Container.WEBM, YouTubeInfo.Encoding.OPUS, YouTubeInfo.AudioQuality.k50));
-            put(250, new YouTubeInfo.StreamAudio(YouTubeInfo.Container.WEBM, YouTubeInfo.Encoding.OPUS, YouTubeInfo.AudioQuality.k70));
-            put(251, new YouTubeInfo.StreamAudio(YouTubeInfo.Container.WEBM, YouTubeInfo.Encoding.OPUS, YouTubeInfo.AudioQuality.k160));
+            put(249, new StreamAudio(Container.WEBM, Encoding.OPUS, AudioQuality.k50));
+            put(250, new StreamAudio(Container.WEBM, Encoding.OPUS, AudioQuality.k70));
+            put(251, new StreamAudio(Container.WEBM, Encoding.OPUS, AudioQuality.k160));
         }
     };
 
@@ -232,8 +236,8 @@ public class YouTubeParser extends VGetParser {
      * @param notify
      * @throws Exception
      */
-    public void extractEmbedded(List<VideoDownload> sNextVideoURL, final YouTubeInfo info, final AtomicBoolean stop,
-            final Runnable notify) throws Exception {
+    public void extractEmbedded(List<YoutubeVideoDownload> sNextVideoURL, final YouTubeInfo info, final AtomicBoolean stop,
+                                final Runnable notify) throws Exception {
         String id = extractId(info.getWeb());
         if (id == null) {
             throw new RuntimeException("unknown url");
@@ -325,8 +329,8 @@ public class YouTubeParser extends VGetParser {
         }
     }
 
-    public void extractHtmlInfo(List<VideoDownload> sNextVideoURL, YouTubeInfo info, String html, AtomicBoolean stop,
-            Runnable notify) throws Exception {
+    public void extractHtmlInfo(List<YoutubeVideoDownload> sNextVideoURL, YouTubeInfo info, String html, AtomicBoolean stop,
+                                Runnable notify) throws Exception {
         {
             Pattern age = Pattern.compile("(verify_age)");
             Matcher ageMatch = age.matcher(html);
@@ -459,8 +463,8 @@ public class YouTubeParser extends VGetParser {
             throw new DownloadEmptyTitle("Empty title"); // some times youtube return strange html, cause this error
     }
 
-    public void extractUrlEncodedVideos(List<VideoDownload> sNextVideoURL, String sline, YouTubeInfo info,
-            AtomicBoolean stop, Runnable notify) throws Exception {
+    public void extractUrlEncodedVideos(List<YoutubeVideoDownload> sNextVideoURL, String sline, YouTubeInfo info,
+                                        AtomicBoolean stop, Runnable notify) throws Exception {
         String[] urlStrings = sline.split("url=");
 
         for (String urlString : urlStrings) {
@@ -537,7 +541,7 @@ public class YouTubeParser extends VGetParser {
 
     @Override
     public List<VideoFileInfo> extract(VideoInfo vinfo, AtomicBoolean stop, Runnable notify) {
-        List<VideoDownload> videos = extractLinks((YouTubeInfo) vinfo, stop, notify);
+        List<YoutubeVideoDownload> videos = extractLinks((YouTubeInfo) vinfo, stop, notify);
 
         if (videos.size() == 0) {
             // rare error:
@@ -549,12 +553,12 @@ public class YouTubeParser extends VGetParser {
             throw new DownloadRetry("empty video download list," + " wait until youtube will process the video");
         }
 
-        List<VideoDownload> audios = new ArrayList<VideoDownload>();
+        List<YoutubeVideoDownload> audios = new ArrayList<YoutubeVideoDownload>();
 
         for (int i = videos.size() - 1; i >= 0; i--) {
             if (videos.get(i).stream == null) {
                 videos.remove(i);
-            } else if ((videos.get(i).stream instanceof YouTubeInfo.StreamAudio)) {
+            } else if ((videos.get(i).stream instanceof StreamAudio)) {
                 audios.add(videos.remove(i));
             }
         }
@@ -563,18 +567,18 @@ public class YouTubeParser extends VGetParser {
         audios.sort(new VideoContentFirstComparator());
 
         for (int i = 0; i < videos.size();) {
-            VideoDownload v = videos.get(i);
+            YoutubeVideoDownload v = videos.get(i);
 
             YouTubeInfo yinfo = (YouTubeInfo) vinfo;
             yinfo.setStreamInfo(v.stream);
 
             VideoFileInfo info = new VideoFileInfo(v.url);
 
-            if (v.stream instanceof YouTubeInfo.StreamCombined ) {
+            if (v.stream instanceof StreamCombined ) {
                 vinfo.setInfo(Arrays.asList(info));
             }
 
-            if (v.stream instanceof YouTubeInfo.StreamVideo ) {
+            if (v.stream instanceof StreamVideo ) {
                 if (audios.size() > 0) {
                     VideoFileInfo info2 = new VideoFileInfo(audios.get(0).url); // take first (highest quality)
                     vinfo.setInfo(Arrays.asList(info, info2));

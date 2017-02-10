@@ -1,4 +1,4 @@
-package com.github.serserser.vget2.vhs;
+package com.github.serserser.vget2.vhs.decryption;
 
 import com.github.axet.wget.WGet;
 import com.github.axet.wget.info.ex.DownloadError;
