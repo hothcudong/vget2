@@ -4,8 +4,8 @@ import java.net.URL;
 import java.util.List;
 
 import com.github.serserser.vget2.vhs.youtube.YoutubeITags;
-import com.github.serserser.vget2.vhs.youtubeVideoParams.Container;
-import com.github.serserser.vget2.vhs.youtubeVideoParams.StreamInfo;
+import com.github.serserser.vget2.vhs.youtube.params.Container;
+import com.github.serserser.vget2.vhs.youtube.params.StreamInfo;
 import com.github.serserser.vget2.vhs.youtube.YoutubeVideoDownload;
 
 public class YouTubeMPGParser extends YouTubeParser {

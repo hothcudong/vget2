@@ -4,7 +4,7 @@ import java.net.URI;
 import java.net.URL;
 
 import com.github.serserser.vget2.info.VideoInfo;
-import com.github.serserser.vget2.vhs.youtubeVideoParams.*;
+import com.github.serserser.vget2.vhs.youtube.params.*;
 
 public class YouTubeInfo extends VideoInfo {
 

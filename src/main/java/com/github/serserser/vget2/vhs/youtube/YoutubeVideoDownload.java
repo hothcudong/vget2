@@ -1,6 +1,6 @@
 package com.github.serserser.vget2.vhs.youtube;
 
-import com.github.serserser.vget2.vhs.youtubeVideoParams.StreamInfo;
+import com.github.serserser.vget2.vhs.youtube.params.StreamInfo;
 
 import java.net.URL;
 

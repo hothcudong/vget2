@@ -26,7 +26,7 @@ import com.github.serserser.vget2.vhs.exceptions.VideoDeleted;
 import com.github.serserser.vget2.vhs.exceptions.VideoUnavailablePlayer;
 import com.github.serserser.vget2.vhs.youtube.YoutubeITags;
 import com.github.serserser.vget2.vhs.youtube.YoutubeVideoDownload;
-import com.github.serserser.vget2.vhs.youtubeVideoParams.*;
+import com.github.serserser.vget2.vhs.youtube.params.*;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
 

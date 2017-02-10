@@ -1,9 +1,9 @@
 package com.github.serserser.vget2.vhs;
 
 import com.github.serserser.vget2.vhs.youtube.YoutubeVideoDownload;
-import com.github.serserser.vget2.vhs.youtubeVideoParams.StreamAudio;
-import com.github.serserser.vget2.vhs.youtubeVideoParams.StreamCombined;
-import com.github.serserser.vget2.vhs.youtubeVideoParams.StreamVideo;
+import com.github.serserser.vget2.vhs.youtube.params.StreamAudio;
+import com.github.serserser.vget2.vhs.youtube.params.StreamCombined;
+import com.github.serserser.vget2.vhs.youtube.params.StreamVideo;
 
 import java.util.Comparator;
 

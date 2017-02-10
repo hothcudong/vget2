@@ -10,8 +10,8 @@ import com.github.serserser.vget2.info.VideoInfo;
 import com.github.axet.wget.info.ex.DownloadError;
 import com.github.axet.wget.info.ex.DownloadRetry;
 import com.github.serserser.vget2.vhs.youtube.YoutubeVideoDownload;
-import com.github.serserser.vget2.vhs.youtubeVideoParams.StreamCombined;
-import com.github.serserser.vget2.vhs.youtubeVideoParams.YoutubeQuality;
+import com.github.serserser.vget2.vhs.youtube.params.StreamCombined;
+import com.github.serserser.vget2.vhs.youtube.params.YoutubeQuality;
 
 public class YouTubeQParser extends YouTubeParser {
     YoutubeQuality q;

@@ -1,6 +1,6 @@
 package com.github.serserser.vget2.vhs.youtube;
 
-import com.github.serserser.vget2.vhs.youtubeVideoParams.*;
+import com.github.serserser.vget2.vhs.youtube.params.*;
 
 import java.util.HashMap;
 import java.util.Map;
