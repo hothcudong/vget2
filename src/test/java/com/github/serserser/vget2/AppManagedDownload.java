@@ -1,4 +1,4 @@
-package com.github.axet.vget;
+package com.github.serserser.vget2;
 
 import java.io.File;
 import java.net.URL;
@@ -7,11 +7,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.github.axet.vget.info.VGetParser;
-import com.github.axet.vget.info.VideoFileInfo;
-import com.github.axet.vget.info.VideoInfo;
-import com.github.axet.vget.vhs.VimeoInfo;
-import com.github.axet.vget.vhs.YouTubeInfo;
+import com.github.serserser.vget2.info.VGetParser;
+import com.github.serserser.vget2.info.VideoFileInfo;
+import com.github.serserser.vget2.info.VideoInfo;
+import com.github.serserser.vget2.vhs.VimeoInfo;
+import com.github.serserser.vget2.vhs.YouTubeInfo;
 import com.github.axet.wget.SpeedInfo;
 import com.github.axet.wget.info.DownloadInfo;
 import com.github.axet.wget.info.DownloadInfo.Part;
@@ -49,10 +49,10 @@ public class AppManagedDownload {
             case EXTRACTING:
             case EXTRACTING_DONE:
             case DONE:
-                if (videoinfo instanceof YouTubeInfo) {
+                if (videoinfo instanceof YouTubeInfo ) {
                     YouTubeInfo i = (YouTubeInfo) videoinfo;
                     System.out.println(videoinfo.getState() + " " + i.getVideoQuality());
-                } else if (videoinfo instanceof VimeoInfo) {
+                } else if (videoinfo instanceof VimeoInfo ) {
                     VimeoInfo i = (VimeoInfo) videoinfo;
                     System.out.println(videoinfo.getState() + " " + i.getVideoQuality());
                 } else {

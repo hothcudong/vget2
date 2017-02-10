@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.serserser</groupId>
     <artifactId>vget2</artifactId>
-    <version>0.1</version>b
+    <version>0.1</version>
     <packaging>jar</packaging>
 
     <name>vget2</name>
@@ -30,8 +30,8 @@
     </developers>
 
     <properties>
-        <log4j.version>2.6.2</log4j.version>
         <slf4j.version>1.7.21</slf4j.version>
+        <log4j.version>2.6.2</log4j.version>
 
         <commons-lang.version>3.5</commons-lang.version>
         <wget.version>1.4.3</wget.version>

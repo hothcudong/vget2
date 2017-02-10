@@ -1,4 +1,4 @@
-package com.github.axet.vget;
+package com.github.serserser.vget2;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -8,18 +8,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.github.serserser.vget2.exceptions.DownloadEmptyTitle;
+import com.github.serserser.vget2.exceptions.DownloadFatal;
+import com.github.serserser.vget2.info.VGetParser;
+import com.github.serserser.vget2.info.VideoFileInfo;
+import com.github.serserser.vget2.info.VideoInfo;
+import com.github.serserser.vget2.vhs.VimeoParser;
+import com.github.serserser.vget2.vhs.YouTubeParser;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import com.github.axet.threads.LimitThreadPool;
-import com.github.axet.vget.ex.DownloadEmptyTitle;
-import com.github.axet.vget.ex.DownloadFatal;
-import com.github.axet.vget.info.VGetParser;
-import com.github.axet.vget.info.VideoFileInfo;
-import com.github.axet.vget.info.VideoInfo;
-import com.github.axet.vget.info.VideoInfo.States;
-import com.github.axet.vget.vhs.VimeoParser;
-import com.github.axet.vget.vhs.YouTubeParser;
 import com.github.axet.wget.Direct;
 import com.github.axet.wget.DirectMultipart;
 import com.github.axet.wget.DirectRange;
@@ -226,13 +225,13 @@ public class VGet {
                 retracted = true;
             } catch (DownloadIOCodeError ee) {
                 if (retry(ee)) {
-                    info.setState(States.RETRYING, ee);
+                    info.setState(VideoInfo.States.RETRYING, ee);
                     notify.run();
                 } else {
                     throw ee;
                 }
             } catch (DownloadRetry ee) {
-                info.setState(States.RETRYING, ee);
+                info.setState(VideoInfo.States.RETRYING, ee);
                 notify.run();
             }
         }
@@ -410,10 +409,10 @@ public class VGet {
             while (!done(stop)) {
                 try {
                     if (info.empty()) {
-                        info.setState(States.EXTRACTING);
+                        info.setState(VideoInfo.States.EXTRACTING);
                         user = parser(user, info.getWeb());
                         user.info(info, stop, notify);
-                        info.setState(States.EXTRACTING_DONE);
+                        info.setState(VideoInfo.States.EXTRACTING_DONE);
                         notify.run();
                     }
                     return;
@@ -435,7 +434,7 @@ public class VGet {
                 }
             }
         } catch (DownloadInterruptedError e) {
-            info.setState(States.STOP);
+            info.setState(VideoInfo.States.STOP);
             notify.run();
             throw e;
         }
@@ -587,7 +586,7 @@ public class VGet {
                             public void run() {
                                 switch (dinfo.getState()) {
                                 case DOWNLOADING:
-                                    info.setState(States.DOWNLOADING);
+                                    info.setState(VideoInfo.States.DOWNLOADING);
                                     notify.run();
                                     break;
                                 case RETRYING:
@@ -658,7 +657,7 @@ public class VGet {
                         throw new DownloadInterruptedError(e);
                     }
 
-                    info.setState(States.DONE);
+                    info.setState(VideoInfo.States.DONE);
                     notify.run();
                     // break while()
                     return;

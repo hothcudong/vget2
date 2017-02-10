@@ -1,21 +1,19 @@
-package com.github.axet.vget.vhs;
+package com.github.serserser.vget2.vhs;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.github.axet.vget.info.VideoFileInfo;
-import com.github.axet.vget.info.VideoInfo;
-import com.github.axet.vget.vhs.YouTubeInfo.StreamCombined;
-import com.github.axet.vget.vhs.YouTubeInfo.YoutubeQuality;
+import com.github.serserser.vget2.info.VideoFileInfo;
+import com.github.serserser.vget2.info.VideoInfo;
 import com.github.axet.wget.info.ex.DownloadError;
 import com.github.axet.wget.info.ex.DownloadRetry;
 
 public class YouTubeQParser extends YouTubeParser {
-    YoutubeQuality q;
+    YouTubeInfo.YoutubeQuality q;
 
-    public YouTubeQParser(YoutubeQuality q) {
+    public YouTubeQParser(YouTubeInfo.YoutubeQuality q) {
         this.q = q;
     }
 
@@ -33,14 +31,14 @@ public class YouTubeQParser extends YouTubeParser {
             throw new DownloadRetry("empty video download list," + " wait until youtube will process the video");
         }
 
-        Collections.sort(sNextVideoURL, new VideoContentFirst());
+        Collections.sort(sNextVideoURL, new VideoContentFirstComparator());
 
         for (int i = 0; i < sNextVideoURL.size(); i++) {
             VideoDownload v = sNextVideoURL.get(i);
 
             boolean found = true;
 
-            StreamCombined vq = (StreamCombined) v.stream;
+            YouTubeInfo.StreamCombined vq = (YouTubeInfo.StreamCombined) v.stream;
 
             found &= q.equals(vq.vq);
 

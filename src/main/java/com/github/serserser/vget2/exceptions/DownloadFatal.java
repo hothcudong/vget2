@@ -1,11 +1,11 @@
-package com.github.axet.vget.ex;
+package com.github.serserser.vget2.exceptions;
 
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.github.axet.vget.info.VideoFileInfo;
+import com.github.serserser.vget2.info.VideoFileInfo;
 import com.github.axet.wget.info.ex.DownloadError;
 
 public class DownloadFatal extends DownloadError {

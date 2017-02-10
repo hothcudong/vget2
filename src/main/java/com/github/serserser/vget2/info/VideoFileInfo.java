@@ -1,4 +1,4 @@
-package com.github.axet.vget.info;
+package com.github.serserser.vget2.info;
 
 import java.io.File;
 import java.net.URL;

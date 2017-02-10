@@ -1,11 +1,11 @@
-package com.github.axet.vget;
+package com.github.serserser.vget2;
 
 import java.net.URL;
 import java.util.List;
 
-import com.github.axet.vget.vhs.YouTubeInfo;
-import com.github.axet.vget.vhs.YouTubeParser;
-import com.github.axet.vget.vhs.YouTubeParser.VideoDownload;
+import com.github.serserser.vget2.vhs.VideoDownload;
+import com.github.serserser.vget2.vhs.YouTubeInfo;
+import com.github.serserser.vget2.vhs.YouTubeParser;
 
 public class ExtractDownloadLinks {
 

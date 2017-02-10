@@ -1,4 +1,4 @@
-package com.github.axet.vget.vhs;
+package com.github.serserser.vget2.vhs;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -12,13 +12,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.github.serserser.vget2.info.VGetParser;
+import com.github.serserser.vget2.info.VideoFileInfo;
 import org.apache.commons.lang3.StringEscapeUtils;
 
-import com.github.axet.vget.info.VGetParser;
-import com.github.axet.vget.info.VideoFileInfo;
-import com.github.axet.vget.info.VideoInfo;
-import com.github.axet.vget.info.VideoInfo.States;
-import com.github.axet.vget.vhs.VimeoInfo.VimeoQuality;
+import com.github.serserser.vget2.info.VideoInfo;
+import com.github.serserser.vget2.info.VideoInfo.States;
+import com.github.serserser.vget2.vhs.VimeoInfo.VimeoQuality;
 import com.github.axet.wget.WGet;
 import com.github.axet.wget.WGet.HtmlLoader;
 import com.github.axet.wget.info.ex.DownloadError;

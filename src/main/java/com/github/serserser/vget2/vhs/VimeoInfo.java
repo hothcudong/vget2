@@ -1,8 +1,8 @@
-package com.github.axet.vget.vhs;
+package com.github.serserser.vget2.vhs;
 
 import java.net.URL;
 
-import com.github.axet.vget.info.VideoInfo;
+import com.github.serserser.vget2.info.VideoInfo;
 
 public class VimeoInfo extends VideoInfo {
     // keep it in order hi->lo

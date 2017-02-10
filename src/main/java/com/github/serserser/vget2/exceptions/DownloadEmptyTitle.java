@@ -1,4 +1,4 @@
-package com.github.axet.vget.ex;
+package com.github.serserser.vget2.exceptions;
 
 import java.io.IOException;
 

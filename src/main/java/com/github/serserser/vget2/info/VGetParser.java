@@ -1,10 +1,10 @@
-package com.github.axet.vget.info;
+package com.github.serserser.vget2.info;
 
 import java.net.URL;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.github.axet.vget.info.VideoInfo.States;
+import com.github.serserser.vget2.info.VideoInfo.States;
 import com.github.axet.wget.info.DownloadInfo;
 import com.github.axet.wget.info.ex.DownloadInterruptedError;
 

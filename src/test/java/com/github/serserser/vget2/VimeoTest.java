@@ -1,4 +1,4 @@
-package com.github.axet.vget;
+package com.github.serserser.vget2;
 
 public class VimeoTest extends AppManagedDownload {
 
