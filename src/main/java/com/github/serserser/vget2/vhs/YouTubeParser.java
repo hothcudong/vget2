@@ -24,6 +24,7 @@ import com.github.serserser.vget2.vhs.exceptions.AgeException;
 import com.github.serserser.vget2.vhs.exceptions.EmbeddingDisabled;
 import com.github.serserser.vget2.vhs.exceptions.VideoDeleted;
 import com.github.serserser.vget2.vhs.exceptions.VideoUnavailablePlayer;
+import com.github.serserser.vget2.vhs.youtube.YoutubeITags;
 import com.github.serserser.vget2.vhs.youtube.YoutubeVideoDownload;
 import com.github.serserser.vget2.vhs.youtubeVideoParams.*;
 import org.apache.commons.lang3.StringEscapeUtils;
@@ -35,7 +36,10 @@ import com.github.axet.wget.info.ex.DownloadRetry;
 
 public class YouTubeParser extends VGetParser {
 
+    private YoutubeITags itags;
+
     public YouTubeParser() {
+        itags = YoutubeITags.getInstance();
     }
 
     public static boolean probe(URL url) {
@@ -114,94 +118,10 @@ public class YouTubeParser extends VGetParser {
      */
     public void filter(List<YoutubeVideoDownload> sNextVideoURL, String itag, URL url) {
         Integer i = Integer.decode(itag);
-        StreamInfo vd = itagMap.get(i);
+        StreamInfo vd = itags.getStream(i);
 
         sNextVideoURL.add(new YoutubeVideoDownload(vd, url));
     }
-
-    // http://en.wikipedia.org/wiki/YouTube#Quality_and_codecs
-
-    public static final Map<Integer, StreamInfo> itagMap = new HashMap<Integer, StreamInfo>() {
-        private static final long serialVersionUID = -6925194111122038477L;
-
-        {
-            put(120, new StreamCombined(Container.FLV, Encoding.H264, YoutubeQuality.p720, Encoding.AAC,
-                    AudioQuality.k128));
-            put(102, new StreamCombined(Container.WEBM, Encoding.VP8, YoutubeQuality.p720, Encoding.VORBIS,
-                    AudioQuality.k192));
-            put(101, new StreamCombined(Container.WEBM, Encoding.VP8, YoutubeQuality.p360, Encoding.VORBIS,
-                    AudioQuality.k192)); // webm
-            put(100, new StreamCombined(Container.WEBM, Encoding.VP8, YoutubeQuality.p360, Encoding.VORBIS,
-                    AudioQuality.k128)); // webm
-            put(85, new StreamCombined(Container.MP4, Encoding.H264, YoutubeQuality.p1080, Encoding.AAC,
-                    AudioQuality.k192)); // mp4
-            put(84, new StreamCombined(Container.MP4, Encoding.H264, YoutubeQuality.p720, Encoding.AAC,
-                    AudioQuality.k192)); // mp4
-            put(83, new StreamCombined(Container.MP4, Encoding.H264, YoutubeQuality.p240, Encoding.AAC,
-                    AudioQuality.k96)); // mp4
-            put(82, new StreamCombined(Container.MP4, Encoding.H264, YoutubeQuality.p360, Encoding.AAC,
-                    AudioQuality.k96)); // mp4
-            put(46, new StreamCombined(Container.WEBM, Encoding.VP8, YoutubeQuality.p1080, Encoding.VORBIS,
-                    AudioQuality.k192)); // webm
-            put(45, new StreamCombined(Container.WEBM, Encoding.VP8, YoutubeQuality.p720, Encoding.VORBIS,
-                    AudioQuality.k192)); // webm
-            put(44, new StreamCombined(Container.WEBM, Encoding.VP8, YoutubeQuality.p480, Encoding.VORBIS,
-                    AudioQuality.k128)); // webm
-            put(43, new StreamCombined(Container.WEBM, Encoding.VP8, YoutubeQuality.p360, Encoding.VORBIS,
-                    AudioQuality.k128)); // webm
-            put(38, new StreamCombined(Container.MP4, Encoding.H264, YoutubeQuality.p3072, Encoding.AAC,
-                    AudioQuality.k192)); // mp4
-            put(37, new StreamCombined(Container.MP4, Encoding.H264, YoutubeQuality.p1080, Encoding.AAC,
-                    AudioQuality.k192)); // mp4
-            put(36, new StreamCombined(Container.GP3, Encoding.MP4, YoutubeQuality.p240, Encoding.AAC,
-                    AudioQuality.k36)); // 3gp
-            put(35, new StreamCombined(Container.FLV, Encoding.H264, YoutubeQuality.p480, Encoding.AAC,
-                    AudioQuality.k128)); // flv
-            put(34, new StreamCombined(Container.FLV, Encoding.H264, YoutubeQuality.p360, Encoding.AAC,
-                    AudioQuality.k128)); // flv
-            put(22, new StreamCombined(Container.MP4, Encoding.H264, YoutubeQuality.p720, Encoding.AAC,
-                    AudioQuality.k192)); // mp4
-            put(18, new StreamCombined(Container.MP4, Encoding.H264, YoutubeQuality.p360, Encoding.AAC,
-                    AudioQuality.k96)); // mp4
-            put(17, new StreamCombined(Container.GP3, Encoding.MP4, YoutubeQuality.p144, Encoding.AAC,
-                    AudioQuality.k24)); // 3gp
-            put(6, new StreamCombined(Container.FLV, Encoding.H263, YoutubeQuality.p270, Encoding.MP3,
-                    AudioQuality.k64)); // flv
-            put(5, new StreamCombined(Container.FLV, Encoding.H263, YoutubeQuality.p240, Encoding.MP3,
-                    AudioQuality.k64)); // flv
-
-            put(133, new StreamVideo(Container.MP4, Encoding.H264, YoutubeQuality.p240));
-            put(134, new StreamVideo(Container.MP4, Encoding.H264, YoutubeQuality.p360));
-            put(135, new StreamVideo(Container.MP4, Encoding.H264, YoutubeQuality.p480));
-            put(136, new StreamVideo(Container.MP4, Encoding.H264, YoutubeQuality.p720));
-            put(137, new StreamVideo(Container.MP4, Encoding.H264, YoutubeQuality.p1080));
-            put(138, new StreamVideo(Container.MP4, Encoding.H264, YoutubeQuality.p2160));
-            put(160, new StreamVideo(Container.MP4, Encoding.H264, YoutubeQuality.p144));
-            put(242, new StreamVideo(Container.WEBM, Encoding.VP9, YoutubeQuality.p240));
-            put(243, new StreamVideo(Container.WEBM, Encoding.VP9, YoutubeQuality.p360));
-            put(244, new StreamVideo(Container.WEBM, Encoding.VP9, YoutubeQuality.p480));
-            put(247, new StreamVideo(Container.WEBM, Encoding.VP9, YoutubeQuality.p720));
-            put(248, new StreamVideo(Container.WEBM, Encoding.VP9, YoutubeQuality.p1080));
-            put(264, new StreamVideo(Container.MP4, Encoding.H264, YoutubeQuality.p1440));
-            put(271, new StreamVideo(Container.WEBM, Encoding.VP9, YoutubeQuality.p1440));
-            put(272, new StreamVideo(Container.WEBM, Encoding.VP9, YoutubeQuality.p2160));
-            put(278, new StreamVideo(Container.WEBM, Encoding.VP9, YoutubeQuality.p144));
-            put(298, new StreamVideo(Container.MP4, Encoding.H264, YoutubeQuality.p720));
-            put(299, new StreamVideo(Container.MP4, Encoding.H264, YoutubeQuality.p1080));
-            put(302, new StreamVideo(Container.WEBM, Encoding.VP9, YoutubeQuality.p720));
-            put(303, new StreamVideo(Container.WEBM, Encoding.VP9, YoutubeQuality.p1080));
-
-            put(139, new StreamAudio(Container.MP4, Encoding.AAC, AudioQuality.k48));
-            put(140, new StreamAudio(Container.MP4, Encoding.AAC, AudioQuality.k128));
-            put(141, new StreamAudio(Container.MP4, Encoding.AAC, AudioQuality.k256));
-            put(171, new StreamAudio(Container.WEBM, Encoding.VORBIS, AudioQuality.k128));
-            put(172, new StreamAudio(Container.WEBM, Encoding.VORBIS, AudioQuality.k192));
-
-            put(249, new StreamAudio(Container.WEBM, Encoding.OPUS, AudioQuality.k50));
-            put(250, new StreamAudio(Container.WEBM, Encoding.OPUS, AudioQuality.k70));
-            put(251, new StreamAudio(Container.WEBM, Encoding.OPUS, AudioQuality.k160));
-        }
-    };
 
     public static String extractId(URL url) {
         {
