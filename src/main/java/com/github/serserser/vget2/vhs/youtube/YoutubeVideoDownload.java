@@ -1,19 +1,19 @@
 package com.github.serserser.vget2.vhs.youtube;
 
-import com.github.serserser.vget2.vhs.youtube.params.StreamInfo;
+import com.github.serserser.vget2.vhs.youtube.params.GenericStreamInfo;
 
 import java.net.URL;
 
 public class YoutubeVideoDownload {
-    private StreamInfo stream;
+    private GenericStreamInfo stream;
     private URL url;
 
-    public YoutubeVideoDownload(StreamInfo s, URL u) {
+    public YoutubeVideoDownload(GenericStreamInfo s, URL u) {
         this.stream = s;
         this.url = u;
     }
 
-    public StreamInfo getStream() {
+    public GenericStreamInfo getStream() {
         return stream;
     }
 

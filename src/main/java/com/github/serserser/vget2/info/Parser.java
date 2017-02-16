@@ -8,31 +8,27 @@ import com.github.serserser.vget2.info.VideoInfo.States;
 import com.github.axet.wget.info.DownloadInfo;
 import com.github.axet.wget.info.ex.DownloadInterruptedError;
 
-public abstract class VGetParser {
+public abstract class Parser {
 
-    public abstract VideoInfo info(URL web);
+    protected abstract List<VideoFileInfo> extract(final VideoInfo vinfo, final AtomicBoolean stop);
 
-    public void info(VideoInfo info, AtomicBoolean stop, Runnable notify) {
+    public void info(VideoInfo info, AtomicBoolean stop) {
         try {
-            List<VideoFileInfo> dinfo = extract(info, stop, notify);
+            List<VideoFileInfo> dinfo = extract(info, stop);
 
             info.setInfo(dinfo);
 
             for (DownloadInfo i : dinfo) {
                 i.setReferer(info.getWeb());
-                i.extract(stop, notify);
+                i.extract(stop, () -> {});
             }
         } catch (DownloadInterruptedError e) {
             info.setState(States.STOP, e);
-            notify.run();
             throw e;
         } catch (RuntimeException e) {
             info.setState(States.ERROR, e);
-            notify.run();
             throw e;
         }
     }
-
-    public abstract List<VideoFileInfo> extract(final VideoInfo vinfo, final AtomicBoolean stop, final Runnable notify);
 
 }

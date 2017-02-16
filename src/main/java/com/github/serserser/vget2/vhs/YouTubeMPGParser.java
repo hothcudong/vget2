@@ -5,7 +5,7 @@ import java.util.List;
 
 import com.github.serserser.vget2.vhs.youtube.YoutubeITags;
 import com.github.serserser.vget2.vhs.youtube.params.Container;
-import com.github.serserser.vget2.vhs.youtube.params.StreamInfo;
+import com.github.serserser.vget2.vhs.youtube.params.GenericStreamInfo;
 import com.github.serserser.vget2.vhs.youtube.YoutubeVideoDownload;
 
 public class YouTubeMPGParser extends YouTubeParser {
@@ -18,10 +18,10 @@ public class YouTubeMPGParser extends YouTubeParser {
 
     public void filter(List<YoutubeVideoDownload> sNextVideoURL, String itag, URL url) {
         Integer i = Integer.decode(itag);
-        StreamInfo vd = itags.getStream(i);
+        GenericStreamInfo vd = itags.getStream(i);
 
         // get rid of webm
-        if (vd.c == Container.WEBM)
+        if (vd.getContainer() == Container.WEBM)
             return;
 
         super.filter(sNextVideoURL, itag, url);

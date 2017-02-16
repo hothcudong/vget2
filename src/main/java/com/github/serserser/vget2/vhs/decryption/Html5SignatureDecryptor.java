@@ -29,7 +29,7 @@ public class Html5SignatureDecryptor {
      *
      * @return player.js file
      */
-    public String getHtml5PlayerScript(final AtomicBoolean stop, final Runnable notify) {
+    public String getHtml5PlayerScript(final AtomicBoolean stop) {
         String url = playerCache.get(playerURI.toString());
 
         if (url == null) {
@@ -37,17 +37,16 @@ public class Html5SignatureDecryptor {
                 String result = WGet.getHtml(playerURI.toURL(), new WGet.HtmlLoader() {
                     @Override
                     public void notifyRetry(int retry, int delay, Throwable e) {
-                        notify.run();
                     }
 
                     @Override
                     public void notifyMoved() {
-                        notify.run();
+
                     }
 
                     @Override
                     public void notifyDownloading() {
-                        notify.run();
+
                     }
                 }, stop);
                 playerCache.put(playerURI.toString(), result);
@@ -128,12 +127,12 @@ public class Html5SignatureDecryptor {
     /**
      * Decodes the youtube video signature using the decode functions provided in the html5player script.
      */
-    public String decrypt(AtomicBoolean stop, Runnable notify) {
+    public String decrypt(AtomicBoolean stop) {
         ScriptEngineManager manager = new ScriptEngineManager();
         // use a js script engine
         ScriptEngine engine = manager.getEngineByName("JavaScript");
 
-        final String playerScript = getHtml5PlayerScript(stop, notify);
+        final String playerScript = getHtml5PlayerScript(stop);
         final String decodeFuncName = getMainDecodeFunctionName(playerScript);
         final String decodeScript = extractDecodeFunctions(playerScript, decodeFuncName);
 

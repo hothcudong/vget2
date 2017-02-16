@@ -1,6 +1,6 @@
 package com.github.serserser.vget2.vhs.youtube.params;
 
-public class StreamVideo extends StreamInfo {
+public class StreamVideo extends GenericStreamInfo {
     public Encoding video;
     public YoutubeQuality vq;
 
@@ -12,9 +12,5 @@ public class StreamVideo extends StreamInfo {
 
         this.vq = vq;
         this.video = v;
-    }
-
-    public String toString() {
-        return c.toString() + " " + video.toString() + "(" + vq.toString() + ")";
     }
 }

@@ -8,18 +8,18 @@ import com.github.serserser.vget2.vhs.youtube.params.*;
 
 public class YouTubeInfo extends VideoInfo {
 
-    private StreamInfo vq;
+    private GenericStreamInfo vq;
     private URI playerURI;
 
     public YouTubeInfo(URL web) {
         super(web);
     }
 
-    public StreamInfo getVideoQuality() {
+    public GenericStreamInfo getVideoQuality() {
         return vq;
     }
 
-    public void setStreamInfo(StreamInfo vq) {
+    public void setStreamInfo(GenericStreamInfo vq) {
         this.vq = vq;
     }
 

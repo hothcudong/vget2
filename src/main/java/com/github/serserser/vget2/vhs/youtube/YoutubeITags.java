@@ -7,7 +7,7 @@ import java.util.Map;
 
 public class YoutubeITags {
 
-    private final Map<Integer, StreamInfo> itagMap = new HashMap<Integer, StreamInfo>();
+    private final Map<Integer, GenericStreamInfo> itagMap = new HashMap<Integer, GenericStreamInfo>();
 
     private static YoutubeITags instance;
 
@@ -18,7 +18,7 @@ public class YoutubeITags {
         return instance;
     }
 
-    public StreamInfo getStream(int tag) {
+    public GenericStreamInfo getStream(int tag) {
         return itagMap.get(tag);
     }
 
@@ -89,15 +89,15 @@ public class YoutubeITags {
         itagMap.put(302, new StreamVideo(Container.WEBM, Encoding.VP9, YoutubeQuality.p720));
         itagMap.put(303, new StreamVideo(Container.WEBM, Encoding.VP9, YoutubeQuality.p1080));
 
-        itagMap.put(139, new StreamAudio(Container.MP4, Encoding.AAC, AudioQuality.k48));
-        itagMap.put(140, new StreamAudio(Container.MP4, Encoding.AAC, AudioQuality.k128));
-        itagMap.put(141, new StreamAudio(Container.MP4, Encoding.AAC, AudioQuality.k256));
-        itagMap.put(171, new StreamAudio(Container.WEBM, Encoding.VORBIS, AudioQuality.k128));
-        itagMap.put(172, new StreamAudio(Container.WEBM, Encoding.VORBIS, AudioQuality.k192));
+        itagMap.put(139, new AudioStream(Container.MP4, Encoding.AAC, AudioQuality.k48));
+        itagMap.put(140, new AudioStream(Container.MP4, Encoding.AAC, AudioQuality.k128));
+        itagMap.put(141, new AudioStream(Container.MP4, Encoding.AAC, AudioQuality.k256));
+        itagMap.put(171, new AudioStream(Container.WEBM, Encoding.VORBIS, AudioQuality.k128));
+        itagMap.put(172, new AudioStream(Container.WEBM, Encoding.VORBIS, AudioQuality.k192));
 
-        itagMap.put(249, new StreamAudio(Container.WEBM, Encoding.OPUS, AudioQuality.k50));
-        itagMap.put(250, new StreamAudio(Container.WEBM, Encoding.OPUS, AudioQuality.k70));
-        itagMap.put(251, new StreamAudio(Container.WEBM, Encoding.OPUS, AudioQuality.k160));
+        itagMap.put(249, new AudioStream(Container.WEBM, Encoding.OPUS, AudioQuality.k50));
+        itagMap.put(250, new AudioStream(Container.WEBM, Encoding.OPUS, AudioQuality.k70));
+        itagMap.put(251, new AudioStream(Container.WEBM, Encoding.OPUS, AudioQuality.k160));
     }
 
 }

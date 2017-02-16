@@ -1,4 +1,6 @@
-package com.github.serserser.vget2;
+package com.github.serserser.dummyApps;
+
+import com.github.serserser.vget2.VGet;
 
 import java.io.File;
 import java.net.URL;

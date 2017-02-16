@@ -27,7 +27,7 @@ public class VideoInfo {
     /**
      * 
      * @param web
-     *            user firendly url
+     *            user friendly url
      */
     public VideoInfo(URL web) {
         this.setWeb(web);
@@ -45,7 +45,7 @@ public class VideoInfo {
     }
 
     /**
-     * reset videoinfo state. make it simialar as after calling constructor
+     * reset videoinfo state. make it similar as after calling constructor
      */
     synchronized public void reset() {
         setState(States.QUEUE);
@@ -53,8 +53,6 @@ public class VideoInfo {
         info = null;
         title = null;
         icon = null;
-        exception = null;
-        delay = 0;
     }
 
     synchronized public String getTitle() {

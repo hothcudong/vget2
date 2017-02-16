@@ -1,13 +1,13 @@
-package com.github.serserser.vget2.vhs.youtubeVideoParams;
+package com.github.serserser.vget2.vhs.youtube.params;
 
-public class StreamAudio extends StreamInfo {
+public class AudioStream extends GenericStreamInfo {
     private Encoding audio;
     private AudioQuality aq;
 
-    public StreamAudio() {
+    public AudioStream() {
     }
 
-    public StreamAudio(Container c, Encoding a, AudioQuality q) {
+    public AudioStream(Container c, Encoding a, AudioQuality q) {
         super(c);
         this.audio = a;
         this.aq = q;
@@ -27,9 +27,5 @@ public class StreamAudio extends StreamInfo {
 
     public void setAq(AudioQuality aq) {
         this.aq = aq;
-    }
-
-    public String toString() {
-        return c.toString() + " " + audio.toString() + " " + aq.toString();
     }
 }

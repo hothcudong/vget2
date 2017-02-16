@@ -10,11 +10,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.github.serserser.vget2.exceptions.DownloadEmptyTitle;
 import com.github.serserser.vget2.exceptions.DownloadFatal;
-import com.github.serserser.vget2.info.VGetParser;
+import com.github.serserser.vget2.info.Parser;
+import com.github.serserser.vget2.info.ServiceProvider;
 import com.github.serserser.vget2.info.VideoFileInfo;
 import com.github.serserser.vget2.info.VideoInfo;
-import com.github.serserser.vget2.vhs.VimeoParser;
-import com.github.serserser.vget2.vhs.YouTubeParser;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -34,42 +33,42 @@ import com.github.axet.wget.info.ex.DownloadMultipartError;
 import com.github.axet.wget.info.ex.DownloadRetry;
 
 public class VGet {
-    public static int THREAD_COUNT = 4;
+
+    ServiceProvider parserProvider;
+
+    /*---------------------------------------------------------------------------------------------*/
+
+    private static final int THREAD_COUNT = 4;
 
     protected VideoInfo info;
     // target directory, where we have to download. automatically name files
     // based on video title and conflict files.
-    protected File targetDir;
+    private File targetDir;
 
     // instead adding (1), (2) ... to filename suffix for conflict files
     // if target file exists, override it. ignores video titles and ignores
     // (exists files)
-    protected File targetForce = null;
+    private File targetForce = null;
 
     /**
      * extract video information constructor
-     * 
-     * @param source
-     *            url source to get video from
+     *
+     * @param source url source to get video from
      */
     public VGet(URL source) {
         this(source, null);
     }
 
     public VGet(URL source, File targetDir) {
-        this(parser(null, source).info(source), targetDir);
-    }
-
-    public VGet(VideoInfo info, File targetDir) {
-        this.info = info;
+        parserProvider = new ServiceProvider();
+        this.info = parserProvider.getInfoForUrl(source);
         this.targetDir = targetDir;
     }
 
     /**
      * Set targetFile manually after you call .extract()
-     * 
-     * @param info
-     *            download info.
+     *
+     * @param info download info.
      */
     public VGet(VideoInfo info) {
         this.info = info;
@@ -77,12 +76,11 @@ public class VGet {
 
     /**
      * set target file for single download source. file willbe overdien if exists.
-     * 
+     * <p>
      * will fail if vget extract several sources (for video/audio urls). use VideoFileInfo.targetFile for multiply
      * sources.
-     * 
-     * @param file
-     *            target file
+     *
+     * @param file target file
      */
     public void setTarget(File file) {
         this.targetForce = file;
@@ -97,29 +95,20 @@ public class VGet {
     }
 
     public void download() {
-        download(null, new AtomicBoolean(false), new Runnable() {
-            @Override
-            public void run() {
-            }
-        });
+        download(null, new AtomicBoolean(false));
     }
 
-    public void download(VGetParser user) {
-        download(user, new AtomicBoolean(false), new Runnable() {
-            @Override
-            public void run() {
-            }
-        });
+    public void download(Parser user) {
+        download(user, new AtomicBoolean(false));
     }
 
     /**
      * Drop all forbidden characters from filename
-     * 
-     * @param f
-     *            input file name
+     *
+     * @param f input file name
      * @return normalized file name
      */
-    public static String replaceBadChars(String f) {
+    private static String replaceBadChars(String f) {
         String replace = " ";
         f = f.replaceAll("/", replace);
         f = f.replaceAll("\\\\", replace);
@@ -135,62 +124,61 @@ public class VGet {
         f = f.trim();
 
         String ff;
-        while (!(ff = f.replaceAll("  ", " ")).equals(f)) {
+        while ( !(ff = f.replaceAll("  ", " ")).equals(f) ) {
             f = ff;
         }
 
         return f;
     }
 
-    public static String maxFileNameLength(String str) {
+    private static String maxFileNameLength(String str) {
         int max = 255;
-        if (str.length() > max)
+        if ( str.length() > max )
             str = str.substring(0, max);
         return str;
     }
 
-    public boolean done(AtomicBoolean stop) {
-        if (stop.get())
+    private boolean done(AtomicBoolean stop) {
+        if ( stop.get() )
             throw new DownloadInterruptedError("stop");
-        if (Thread.currentThread().isInterrupted())
+        if ( Thread.currentThread().isInterrupted() )
             throw new DownloadInterruptedError("interrupted");
 
         return false;
     }
 
-    public VideoFileInfo getNewInfo(List<VideoFileInfo> infoList, VideoFileInfo infoOld) {
-        if (infoOld == null)
+    private VideoFileInfo getNewInfo(List<VideoFileInfo> infoList, VideoFileInfo infoOld) {
+        if ( infoOld == null )
             return null;
 
-        for (VideoFileInfo d : infoList) {
-            if (infoOld.resume(d))
+        for ( VideoFileInfo d : infoList ) {
+            if ( infoOld.resume(d) )
                 return d;
         }
 
         return null;
     }
 
-    public void retry(VGetParser user, AtomicBoolean stop, Runnable notify, Throwable e) {
+    private void retry(Parser user, AtomicBoolean stop, Throwable e) {
         boolean retracted = false;
         int retry = 0;
 
-        while (!retracted) {
+        while ( !retracted ) {
             retry++; // first retry
-            if (!RetryWrap.retry(retry)) {
+            if ( !RetryWrap.retry(retry) ) {
                 throw new DownloadError(e);
             }
-            for (int i = RetryWrap.RETRY_DELAY; i >= 0; i--) {
-                if (stop.get())
+            for ( int i = RetryWrap.RETRY_DELAY; i >= 0; i-- ) {
+                if ( stop.get() )
                     throw new DownloadInterruptedError("stop");
-                if (Thread.currentThread().isInterrupted())
+                if ( Thread.currentThread().isInterrupted() )
                     throw new DownloadInterruptedError("interrupted");
 
                 info.setRetrying(retry, i, e);
-                notify.run();
 
                 try {
                     Thread.sleep(1000);
-                } catch (InterruptedException ee) {
+                } catch ( InterruptedException ee ) {
                     throw new DownloadInterruptedError(ee);
                 }
             }
@@ -202,20 +190,24 @@ public class VGet {
 
                 List<VideoFileInfo> infoOldList = info.getInfo();
 
-                user = parser(user, info.getWeb());
-                user.info(info, stop, notify);
+                Parser parser;
+                if ( user == null ) {
+                    parser = parserProvider.getParserForUrl(info.getWeb());
+                } else {
+                    parser = user;
+                }
+                parser.info(info, stop);
 
-                if (infoOldList != null) {
-                    // info replaced by user.info() call
+                if ( infoOldList != null ) {
                     List<VideoFileInfo> infoNewList = info.getInfo();
 
-                    for (VideoFileInfo infoOld : infoOldList) {
+                    for ( VideoFileInfo infoOld : infoOldList ) {
                         DownloadInfo infoNew = getNewInfo(infoNewList, infoOld);
 
-                        if (infoOld != null && infoNew != null && infoOld.resume(infoNew)) {
+                        if ( infoOld != null && infoNew != null && infoOld.resume(infoNew) ) {
                             infoNew.copy(infoOld);
                         } else {
-                            if (infoOld.targetFile != null) {
+                            if ( infoOld.targetFile != null ) {
                                 FileUtils.deleteQuietly(infoOld.targetFile);
                                 infoOld.targetFile = null;
                             }
@@ -223,24 +215,22 @@ public class VGet {
                     }
                 }
                 retracted = true;
-            } catch (DownloadIOCodeError ee) {
-                if (retry(ee)) {
+            } catch ( DownloadIOCodeError ee ) {
+                if ( retry(ee) ) {
                     info.setState(VideoInfo.States.RETRYING, ee);
-                    notify.run();
                 } else {
                     throw ee;
                 }
-            } catch (DownloadRetry ee) {
+            } catch ( DownloadRetry ee ) {
                 info.setState(VideoInfo.States.RETRYING, ee);
-                notify.run();
             }
         }
     }
 
     // return ".ext" ex: ".mp3" ".webm"
-    public String getExt(DownloadInfo dinfo) {
+    private String getExt(DownloadInfo dinfo) {
         String ct = dinfo.getContentType();
-        if (ct == null)
+        if ( ct == null )
             throw new DownloadRetry("null content type");
 
         // for single file download keep only extension
@@ -251,9 +241,9 @@ public class VGet {
     }
 
     // return ".content.ext" ex: ".audio.mp3"
-    public String getContentExt(DownloadInfo dinfo) {
+    private String getContentExt(DownloadInfo dinfo) {
         String ct = dinfo.getContentType();
-        if (ct == null)
+        if ( ct == null )
             throw new DownloadRetry("null content type");
 
         // for multi file download keep content type and extension. some video can have same extensions for booth
@@ -263,12 +253,12 @@ public class VGet {
         return "." + ct.replaceAll("x-", "").toLowerCase();
     }
 
-    public boolean exists(File f, AtomicBoolean conflict) {
-        if (f.exists())
+    private boolean exists(File f, AtomicBoolean conflict) {
+        if ( f.exists() )
             return true;
-        for (VideoFileInfo dinfo : info.getInfo()) {
-            if (dinfo.targetFile != null && dinfo.targetFile.equals(f)) {
-                if (conflict != null)
+        for ( VideoFileInfo dinfo : info.getInfo() ) {
+            if ( dinfo.targetFile != null && dinfo.targetFile.equals(f) ) {
+                if ( conflict != null )
                     conflict.set(true);
                 return true;
             }
@@ -276,9 +266,9 @@ public class VGet {
         return false;
     }
 
-    public void targetFileForce(VideoFileInfo dinfo) {
-        if (targetForce != null) {
-            if (exists(targetForce, null)) {
+    private void targetFileForce(VideoFileInfo dinfo) {
+        if ( targetForce != null ) {
+            if ( exists(targetForce, null) ) {
                 // VGet v = new VGet(videoinfo, path);
                 // v.extract(user, stop, notify);
                 // List<VideoFileInfo> list = videoinfo.getInfo();
@@ -292,18 +282,18 @@ public class VGet {
 
             dinfo.targetFile = targetForce;
 
-            if (dinfo.multipart()) {
-                if (!DirectMultipart.canResume(dinfo, dinfo.targetFile)) {
+            if ( dinfo.multipart() ) {
+                if ( !DirectMultipart.canResume(dinfo, dinfo.targetFile) ) {
                     FileUtils.deleteQuietly(dinfo.targetFile);
                     dinfo.reset();
                 }
-            } else if (dinfo.getRange()) {
-                if (!DirectRange.canResume(dinfo, dinfo.targetFile)) {
+            } else if ( dinfo.getRange() ) {
+                if ( !DirectRange.canResume(dinfo, dinfo.targetFile) ) {
                     FileUtils.deleteQuietly(dinfo.targetFile);
                     dinfo.reset();
                 }
             } else {
-                if (!DirectSingle.canResume(dinfo, dinfo.targetFile)) {
+                if ( !DirectSingle.canResume(dinfo, dinfo.targetFile) ) {
                     FileUtils.deleteQuietly(dinfo.targetFile);
                     dinfo.reset();
                 }
@@ -312,9 +302,9 @@ public class VGet {
     }
 
     // return true, video download have the same ".ext" for multiple videos
-    public void targetFileExt(VideoFileInfo dinfo, String ext, AtomicBoolean conflict) {
-        if (dinfo.targetFile == null) {
-            if (targetDir == null) {
+    private void targetFileExt(VideoFileInfo dinfo, String ext, AtomicBoolean conflict) {
+        if ( dinfo.targetFile == null ) {
+            if ( targetDir == null ) {
                 throw new RuntimeException("Set download file or directory first");
             }
 
@@ -331,7 +321,7 @@ public class VGet {
                 String add = idupcount > 0 ? " (".concat(idupcount.toString()).concat(")") : "";
                 f = new File(targetDir, sfilename + add + ext);
                 idupcount += 1;
-            } while (exists(f, conflict));
+            } while ( exists(f, conflict) );
 
             dinfo.targetFile = f;
 
@@ -343,31 +333,28 @@ public class VGet {
 
     /**
      * set targetFile for specified VideoFileInfo.
-     * 
-     * @param dinfo
-     *            VideoFileInfo to set targetFile for
-     * @param ext
-     *            File extension. call getExt() or getContentExt()
-     * @param conflict
-     *            True if we have same file extension for multiply files. File name will be renamed to " (1).ext"
+     *
+     * @param dinfo    VideoFileInfo to set targetFile for
+     * @param ext      File extension. call getExt() or getContentExt()
+     * @param conflict True if we have same file extension for multiply files. File name will be renamed to " (1).ext"
      */
-    public void targetFile(VideoFileInfo dinfo, String ext, AtomicBoolean conflict) {
+    private void targetFile(VideoFileInfo dinfo, String ext, AtomicBoolean conflict) {
         targetFileForce(dinfo);
         targetFileExt(dinfo, ext, conflict);
     }
 
-    public boolean retry(Throwable e) {
-        if (e == null)
+    private boolean retry(Throwable e) {
+        if ( e == null )
             return true;
 
-        if (e instanceof DownloadIOCodeError) {
+        if ( e instanceof DownloadIOCodeError ) {
             DownloadIOCodeError c = (DownloadIOCodeError) e;
-            switch (c.getCode()) {
-            case HttpURLConnection.HTTP_FORBIDDEN:
-            case 416: // 416 Requested Range Not Satisfiable
-                return true;
-            default:
-                return false;
+            switch ( c.getCode() ) {
+                case HttpURLConnection.HTTP_FORBIDDEN:
+                case 416: // 416 Requested Range Not Satisfiable
+                    return true;
+                default:
+                    return false;
             }
         }
 
@@ -376,73 +363,64 @@ public class VGet {
 
     /**
      * @return return status of download information. subclassing for VideoInfo.empty();
-     * 
      */
-    public boolean empty() {
+    private boolean empty() {
         return getVideo().empty();
     }
 
     public void extract() {
-        extract(new AtomicBoolean(false), new Runnable() {
-            @Override
-            public void run() {
-            }
-        });
+        extract(new AtomicBoolean(false));
     }
 
-    public void extract(AtomicBoolean stop, Runnable notify) {
-        extract(null, stop, notify);
+    private void extract(AtomicBoolean stop) {
+        extract(null, stop);
     }
 
     /**
      * extract video information, retry until success
-     * 
-     * @param user
-     *            user info object
-     * @param stop
-     *            stop signal boolean
-     * @param notify
-     *            notify executre
+     *
+     * @param inputParser user info object
+     * @param stop        stop signal boolean
      */
-    public void extract(VGetParser user, AtomicBoolean stop, Runnable notify) {
+    public void extract(Parser inputParser, AtomicBoolean stop) {
+        Parser parser;
+
         try {
-            while (!done(stop)) {
+            while ( !done(stop) ) {
                 try {
-                    if (info.empty()) {
+                    if ( info.empty() ) {
                         info.setState(VideoInfo.States.EXTRACTING);
-                        user = parser(user, info.getWeb());
-                        user.info(info, stop, notify);
+                        if ( inputParser == null ) {
+                            parser = parserProvider.getParserForUrl(info.getWeb());
+                        } else {
+                            parser = inputParser;
+                        }
+                        parser.info(info, stop);
                         info.setState(VideoInfo.States.EXTRACTING_DONE);
-                        notify.run();
                     }
                     return;
-                } catch (DownloadRetry e) {
-                    retry(user, stop, notify, e);
-                } catch (DownloadEmptyTitle e) {
-                    retry(user, stop, notify, e);
-                } catch (DownloadMultipartError e) {
+                } catch ( DownloadRetry | DownloadEmptyTitle | DownloadIOError e ) {
+                    retry(inputParser, stop, e);
+                } catch ( DownloadMultipartError e ) {
                     checkFileNotFound(e);
                     checkRetry(e);
-                    retry(user, stop, notify, e);
-                } catch (DownloadIOCodeError e) {
-                    if (retry(e))
-                        retry(user, stop, notify, e);
+                    retry(inputParser, stop, e);
+                } catch ( DownloadIOCodeError e ) {
+                    if ( retry(e) )
+                        retry(inputParser, stop, e);
                     else
                         throw e;
-                } catch (DownloadIOError e) {
-                    retry(user, stop, notify, e);
                 }
             }
-        } catch (DownloadInterruptedError e) {
+        } catch ( DownloadInterruptedError e ) {
             info.setState(VideoInfo.States.STOP);
-            notify.run();
             throw e;
         }
     }
 
-    void checkRetry(DownloadMultipartError e) {
-        for (Part ee : e.getInfo().getParts()) {
-            if (!retry(ee.getException())) {
+    private void checkRetry(DownloadMultipartError e) {
+        for ( Part ee : e.getInfo().getParts() ) {
+            if ( !retry(ee.getException()) ) {
                 throw e;
             }
         }
@@ -450,30 +428,29 @@ public class VGet {
 
     /**
      * check if all parts has the same filenotfound exception. if so throw DownloadError.FilenotFoundexcepiton
-     * 
-     * @param e
-     *            error occured
+     *
+     * @param e error occured
      */
-    void checkFileNotFound(DownloadMultipartError e) {
+    private void checkFileNotFound(DownloadMultipartError e) {
         FileNotFoundException f = null;
-        for (Part ee : e.getInfo().getParts()) {
+        for ( Part ee : e.getInfo().getParts() ) {
             // no error for this part? skip it
-            if (ee.getException() == null)
+            if ( ee.getException() == null )
                 continue;
             // this exception has no cause? then it is not FileNotFound
             // excpetion. then do noting. this is checking function. do not
             // rethrow
-            if (ee.getException().getCause() == null)
+            if ( ee.getException().getCause() == null )
                 return;
-            if (ee.getException().getCause() instanceof FileNotFoundException) {
+            if ( ee.getException().getCause() instanceof FileNotFoundException ) {
                 // our first filenotfoundexception?
-                if (f == null) {
+                if ( f == null ) {
                     // save it for later checks
                     f = (FileNotFoundException) ee.getException().getCause();
                 } else {
                     // check filenotfound error message is it the same?
                     FileNotFoundException ff = (FileNotFoundException) ee.getException().getCause();
-                    if (!ff.getMessage().equals(f.getMessage())) {
+                    if ( !ff.getMessage().equals(f.getMessage()) ) {
                         // if the filenotfound exception message is not the
                         // same. then we cannot retrhow filenotfound exception.
                         // return and continue checks
@@ -484,22 +461,22 @@ public class VGet {
                 break;
             }
         }
-        if (f != null)
+        if ( f != null )
             throw new DownloadError(f);
     }
 
-    public void download(final AtomicBoolean stop, final Runnable notify) {
-        download(null, stop, notify);
+    public void download(final AtomicBoolean stop) {
+        download(null, stop);
     }
 
-    public void download(VGetParser user, final AtomicBoolean stop, final Runnable notify) {
+    public void download(Parser user, final AtomicBoolean stop) {
         try {
-            if (empty()) {
-                extract(user, stop, notify);
+            if ( empty() ) {
+                extract(user, stop);
             }
 
             // retry exception loop
-            while (!done(stop)) {
+            while ( !done(stop) ) {
                 try {
                     final List<VideoFileInfo> dinfoList = info.getInfo();
 
@@ -510,20 +487,20 @@ public class VGet {
                     // new targetFile() call
                     {
                         // update targetFile only if not been set on previous while(!done()) loops.
-                        List<VideoFileInfo> targetNull = new ArrayList<VideoFileInfo>();
+                        List<VideoFileInfo> targetNull = new ArrayList<>();
 
                         // safety checks. should it be 'vhs' dependent? does other services return other than
                         // "video/audio"?
-                        for (final VideoFileInfo dinfo : dinfoList) {
-                            if (dinfo.targetFile == null)
+                        for ( final VideoFileInfo dinfo : dinfoList ) {
+                            if ( dinfo.targetFile == null )
                                 targetNull.add(dinfo);
                             {
                                 String c = dinfo.getContentType();
-                                if (c == null)
+                                if ( c == null )
                                     c = "";
                                 boolean v = c.contains("video/");
                                 boolean a = c.contains("audio/");
-                                if (!v && !a) {
+                                if ( !v && !a ) {
                                     throw new DownloadRetry(
                                             "unable to download video, bad content " + dinfo.getContentType());
                                 }
@@ -534,42 +511,42 @@ public class VGet {
                         // we can continue but one result file name would be like "SomeTitle (1).mp3"
                         AtomicBoolean conflict = new AtomicBoolean(false);
                         // 1) ".ext"
-                        for (final VideoFileInfo dinfo : targetNull) {
+                        for ( final VideoFileInfo dinfo : targetNull ) {
                             dinfo.targetFile = null;
                             targetFile(dinfo, getExt(dinfo), conflict);
                         }
                         // conflict means we have " (1).ext" download. try add ".content.ext" as extension
                         // to make file names looks more pretty.
-                        if (conflict.get()) {
+                        if ( conflict.get() ) {
                             conflict = new AtomicBoolean(false);
                             // 2) ".content.ext"
-                            for (final VideoFileInfo dinfo : targetNull) {
+                            for ( final VideoFileInfo dinfo : targetNull ) {
                                 dinfo.targetFile = null;
                                 targetFile(dinfo, getContentExt(dinfo), conflict);
                             }
                         }
                     }
 
-                    for (final VideoFileInfo dinfo : dinfoList) {
-                        if (dinfo.targetFile == null) {
+                    for ( final VideoFileInfo dinfo : dinfoList ) {
+                        if ( dinfo.targetFile == null ) {
                             throw new RuntimeException("bad target");
                         }
 
                         Direct directV;
 
-                        if (dinfo.multipart()) {
+                        if ( dinfo.multipart() ) {
                             // multi part? overwrite.
                             directV = new DirectMultipart(dinfo, dinfo.targetFile);
-                        } else if (dinfo.getRange()) {
+                        } else if ( dinfo.getRange() ) {
                             // range download? try to resume download from last position
-                            if (dinfo.targetFile.exists() && dinfo.targetFile.length() != dinfo.getCount()) {
+                            if ( dinfo.targetFile.exists() && dinfo.targetFile.length() != dinfo.getCount() ) {
                                 // all files have set targetFile, so targetNull == empty
-                                if (targetDir == null)
+                                if ( targetDir == null )
                                     targetDir = dinfo.targetFile.getParentFile();
                                 dinfo.targetFile = null;
                                 AtomicBoolean conflict = new AtomicBoolean(false);
                                 targetFile(dinfo, getExt(dinfo), conflict);
-                                if (conflict.get()) {
+                                if ( conflict.get() ) {
                                     dinfo.targetFile = null;
                                     targetFile(dinfo, getContentExt(dinfo), conflict);
                                 }
@@ -581,50 +558,42 @@ public class VGet {
                         }
                         final Direct direct = directV;
 
-                        final Runnable r = new Runnable() {
-                            @Override
-                            public void run() {
-                                switch (dinfo.getState()) {
+                        final Runnable r = () -> {
+                            switch ( dinfo.getState() ) {
                                 case DOWNLOADING:
                                     info.setState(VideoInfo.States.DOWNLOADING);
-                                    notify.run();
                                     break;
                                 case RETRYING:
                                     info.setRetrying(dinfo.getRetry(), dinfo.getDelay(), dinfo.getException());
-                                    notify.run();
                                     break;
                                 default:
                                     // we can safely skip all statues.
                                     // (extracting - already passed, STOP /
                                     // ERROR / DONE i will catch up here
-                                }
                             }
                         };
 
                         try {
-                            l.blockExecute(new Runnable() {
-                                @Override
-                                public void run() {
-                                    try {
-                                        direct.download(stop, r);
-                                    } catch (DownloadInterruptedError e) {
-                                        // we need to handle this task error to l.waitUntilTermination()
-                                        main.interrupt();
-                                    } catch (RuntimeException e) {
-                                        dinfo.setState(com.github.axet.wget.info.URLInfo.States.ERROR, e);
-                                        main.interrupt();
-                                    }
+                            l.blockExecute(() -> {
+                                try {
+                                    direct.download(stop, r);
+                                } catch ( DownloadInterruptedError e ) {
+                                    // we need to handle this task error to l.waitUntilTermination()
+                                    main.interrupt();
+                                } catch ( RuntimeException e ) {
+                                    dinfo.setState(com.github.axet.wget.info.URLInfo.States.ERROR, e);
+                                    main.interrupt();
                                 }
                             });
-                        } catch (InterruptedException e) {
+                        } catch ( InterruptedException e ) {
                             l.interrupt();
                             // wait for childs to exit
                             boolean clear = true;
-                            while (clear) {
+                            while ( clear ) {
                                 try {
                                     l.join();
                                     clear = false;
-                                } catch (InterruptedException ee) {
+                                } catch ( InterruptedException ee ) {
                                     // we got interrupted twice from main.interrupt()
                                 }
                             }
@@ -634,21 +603,21 @@ public class VGet {
 
                     try {
                         l.waitUntilTermination();
-                    } catch (InterruptedException e) {
+                    } catch ( InterruptedException e ) {
                         l.interrupt();
                         // wait for childs to exit
                         boolean clear = true;
-                        while (clear) {
+                        while ( clear ) {
                             try {
                                 l.join();
                                 clear = false;
-                            } catch (InterruptedException ee) {
+                            } catch ( InterruptedException ee ) {
                                 // we got interrupted twice from main.interrupt()
                             }
                         }
                         // do we have any error?
-                        for (final VideoFileInfo dinfo : dinfoList) {
-                            if (dinfo.getException() != null) {
+                        for ( final VideoFileInfo dinfo : dinfoList ) {
+                            if ( dinfo.getException() != null ) {
                                 // yes some kind of fatal error on one or more files
                                 throw new DownloadFatal(e, dinfoList);
                             }
@@ -658,52 +627,27 @@ public class VGet {
                     }
 
                     info.setState(VideoInfo.States.DONE);
-                    notify.run();
                     // break while()
                     return;
-                } catch (DownloadRetry e) {
-                    retry(user, stop, notify, e);
-                } catch (DownloadMultipartError e) {
+                } catch ( DownloadRetry | DownloadIOError e ) {
+                    retry(user, stop, e);
+                } catch ( DownloadMultipartError e ) {
                     checkFileNotFound(e);
                     checkRetry(e);
-                    retry(user, stop, notify, e);
-                } catch (DownloadIOCodeError e) {
-                    if (retry(e))
-                        retry(user, stop, notify, e);
+                    retry(user, stop, e);
+                } catch ( DownloadIOCodeError e ) {
+                    if ( retry(e) )
+                        retry(user, stop, e);
                     else
                         throw e;
-                } catch (DownloadIOError e) {
-                    retry(user, stop, notify, e);
                 }
             }
-        } catch (DownloadInterruptedError e) {
+        } catch ( DownloadInterruptedError e ) {
             info.setState(VideoInfo.States.STOP, e);
-            notify.run();
             throw e;
-        } catch (RuntimeException e) {
+        } catch ( RuntimeException e ) {
             info.setState(VideoInfo.States.ERROR, e);
-            notify.run();
             throw e;
         }
     }
-
-    public static VGetParser parser(URL web) {
-        return parser(null, web);
-    }
-
-    public static VGetParser parser(VGetParser user, URL web) {
-        VGetParser ei = user;
-
-        if (ei == null && YouTubeParser.probe(web))
-            ei = new YouTubeParser();
-
-        if (ei == null && VimeoParser.probe(web))
-            ei = new VimeoParser();
-
-        if (ei == null)
-            throw new RuntimeException("unsupported web site");
-
-        return ei;
-    }
-
 }

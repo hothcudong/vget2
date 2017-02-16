@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.github.serserser.vget2.info.VGetParser;
+import com.github.serserser.vget2.info.Parser;
 import com.github.serserser.vget2.info.VideoFileInfo;
 import com.github.serserser.vget2.vhs.vimeo.VimeoVideoDownload;
 import com.github.serserser.vget2.vhs.vimeo.downloadInfo.VimeoData;
@@ -24,13 +24,9 @@ import com.github.axet.wget.WGet.HtmlLoader;
 import com.github.axet.wget.info.ex.DownloadError;
 import com.google.gson.Gson;
 
-public class VimeoParser extends VGetParser {
+public class VimeoParser extends Parser {
 
     public VimeoParser() {
-    }
-
-    public static boolean probe(URL url) {
-        return url.toString().contains("vimeo.com");
     }
 
     public static String extractId(URL url) {
@@ -55,7 +51,7 @@ public class VimeoParser extends VGetParser {
         return null;
     }
 
-    public List<VimeoVideoDownload> extractLinks(final VideoInfo info, final AtomicBoolean stop, final Runnable notify) {
+    public List<VimeoVideoDownload> extractLinks(final VideoInfo info, final AtomicBoolean stop) {
         List<VimeoVideoDownload> list = new ArrayList<VimeoVideoDownload>();
 
         try {
@@ -75,19 +71,16 @@ public class VimeoParser extends VGetParser {
                 @Override
                 public void notifyRetry(int retry, int delay, Throwable e) {
                     info.setRetrying(retry, delay, e);
-                    notify.run();
                 }
 
                 @Override
                 public void notifyDownloading() {
                     info.setState(States.EXTRACTING);
-                    notify.run();
                 }
 
                 @Override
                 public void notifyMoved() {
                     info.setState(States.RETRYING);
-                    notify.run();
                 }
             }, stop);
 
@@ -107,19 +100,16 @@ public class VimeoParser extends VGetParser {
                 @Override
                 public void notifyRetry(int retry, int delay, Throwable e) {
                     info.setRetrying(retry, delay, e);
-                    notify.run();
                 }
 
                 @Override
                 public void notifyDownloading() {
                     info.setState(States.EXTRACTING);
-                    notify.run();
                 }
 
                 @Override
                 public void notifyMoved() {
                     info.setState(States.RETRYING);
-                    notify.run();
                 }
             }, stop);
 
@@ -144,8 +134,8 @@ public class VimeoParser extends VGetParser {
     }
 
     @Override
-    public List<VideoFileInfo> extract(VideoInfo vinfo, AtomicBoolean stop, Runnable notify) {
-        List<VimeoVideoDownload> sNextVideoURL = extractLinks(vinfo, stop, notify);
+    public List<VideoFileInfo> extract(VideoInfo vinfo, AtomicBoolean stop) {
+        List<VimeoVideoDownload> sNextVideoURL = extractLinks(vinfo, stop);
 
         Collections.sort(sNextVideoURL, new VimeoVideoContentFirstComparator());
 
@@ -166,8 +156,4 @@ public class VimeoParser extends VGetParser {
         throw new DownloadError("no video with required quality found");
     }
 
-    @Override
-    public VideoInfo info(URL web) {
-        return new VimeoInfo(web);
-    }
 }

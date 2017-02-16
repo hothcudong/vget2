@@ -15,7 +15,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.github.serserser.vget2.exceptions.DownloadEmptyTitle;
-import com.github.serserser.vget2.info.VGetParser;
+import com.github.serserser.vget2.info.Parser;
 import com.github.serserser.vget2.info.VideoFileInfo;
 import com.github.serserser.vget2.info.VideoInfo;
 import com.github.serserser.vget2.vhs.decryption.Html5SignatureDecryptor;
@@ -34,7 +34,7 @@ import com.github.axet.wget.WGet;
 import com.github.axet.wget.info.ex.DownloadError;
 import com.github.axet.wget.info.ex.DownloadRetry;
 
-public class YouTubeParser extends VGetParser {
+public class YouTubeParser extends Parser {
 
     private YoutubeITags itags;
 
@@ -42,27 +42,19 @@ public class YouTubeParser extends VGetParser {
         itags = YoutubeITags.getInstance();
     }
 
-    public static boolean probe(URL url) {
-        return url.toString().contains("youtube.com");
-    }
-
     public List<YoutubeVideoDownload> extractLinks(final YouTubeInfo info) {
-        return extractLinks(info, new AtomicBoolean(), new Runnable() {
-            @Override
-            public void run() {
-            }
-        });
+        return extractLinks(info, new AtomicBoolean());
     }
 
-    public List<YoutubeVideoDownload> extractLinks(final YouTubeInfo info, final AtomicBoolean stop, final Runnable notify) {
+    public List<YoutubeVideoDownload> extractLinks(final YouTubeInfo info, final AtomicBoolean stop) {
         try {
             List<YoutubeVideoDownload> sNextVideoURL = new ArrayList<YoutubeVideoDownload>();
 
             try {
-                streamCapture(sNextVideoURL, info, stop, notify);
+                streamCapture(sNextVideoURL, info, stop);
             } catch ( DownloadError e ) {
                 try {
-                    extractEmbedded(sNextVideoURL, info, stop, notify);
+                    extractEmbedded(sNextVideoURL, info, stop);
                 } catch ( EmbeddingDisabled ignore ) {
                     throw e;
                 }
@@ -81,32 +73,27 @@ public class YouTubeParser extends VGetParser {
      * @param sNextVideoURL url list to download
      * @param info          download info
      * @param stop          stop flag
-     * @param notify        notify object
      * @throws Exception download error
      */
-    public void streamCapture(List<YoutubeVideoDownload> sNextVideoURL, final YouTubeInfo info, final AtomicBoolean stop,
-                              final Runnable notify) throws Exception {
+    public void streamCapture(List<YoutubeVideoDownload> sNextVideoURL, final YouTubeInfo info, final AtomicBoolean stop) throws Exception {
         String html;
         html = WGet.getHtml(info.getWeb(), new WGet.HtmlLoader() {
             @Override
             public void notifyRetry(int retry, int delay, Throwable e) {
                 info.setRetrying(retry, delay, e);
-                notify.run();
             }
 
             @Override
             public void notifyDownloading() {
                 info.setState(VideoInfo.States.DOWNLOADING);
-                notify.run();
             }
 
             @Override
             public void notifyMoved() {
                 info.setState(VideoInfo.States.RETRYING);
-                notify.run();
             }
         }, stop);
-        extractHtmlInfo(sNextVideoURL, info, html, stop, notify);
+        extractHtmlInfo(sNextVideoURL, info, html, stop);
         extractIcon(info, html);
     }
 
@@ -118,7 +105,7 @@ public class YouTubeParser extends VGetParser {
      */
     public void filter(List<YoutubeVideoDownload> sNextVideoURL, String itag, URL url) {
         Integer i = Integer.decode(itag);
-        StreamInfo vd = itags.getStream(i);
+        GenericStreamInfo vd = itags.getStream(i);
 
         sNextVideoURL.add(new YoutubeVideoDownload(vd, url));
     }
@@ -146,11 +133,9 @@ public class YouTubeParser extends VGetParser {
      *
      * @param info
      * @param stop
-     * @param notify
      * @throws Exception
      */
-    public void extractEmbedded(List<YoutubeVideoDownload> sNextVideoURL, final YouTubeInfo info, final AtomicBoolean stop,
-                                final Runnable notify) throws Exception {
+    public void extractEmbedded(List<YoutubeVideoDownload> sNextVideoURL, final YouTubeInfo info, final AtomicBoolean stop) throws Exception {
         String id = extractId(info.getWeb());
         if ( id == null ) {
             throw new RuntimeException("unknown url");
@@ -166,19 +151,16 @@ public class YouTubeParser extends VGetParser {
             @Override
             public void notifyRetry(int retry, int delay, Throwable e) {
                 info.setRetrying(retry, delay, e);
-                notify.run();
             }
 
             @Override
             public void notifyDownloading() {
                 info.setState(VideoInfo.States.DOWNLOADING);
-                notify.run();
             }
 
             @Override
             public void notifyMoved() {
                 info.setState(VideoInfo.States.RETRYING);
-                notify.run();
             }
         }, stop);
 
@@ -202,7 +184,7 @@ public class YouTubeParser extends VGetParser {
 
         String url_encoded_fmt_stream_map = URLDecoder.decode(map.get("url_encoded_fmt_stream_map"), WGet.UTF8);
 
-        extractUrlEncodedVideos(sNextVideoURL, url_encoded_fmt_stream_map, info, stop, notify);
+        extractUrlEncodedVideos(sNextVideoURL, url_encoded_fmt_stream_map, info, stop);
 
         // 'iurlmaxresæ or 'iurlsd' or 'thumbnail_url'
         String icon = map.get("thumbnail_url");
@@ -242,8 +224,7 @@ public class YouTubeParser extends VGetParser {
         }
     }
 
-    public void extractHtmlInfo(List<YoutubeVideoDownload> sNextVideoURL, YouTubeInfo info, String html, AtomicBoolean stop,
-                                Runnable notify) throws Exception {
+    public void extractHtmlInfo(List<YoutubeVideoDownload> sNextVideoURL, YouTubeInfo info, String html, AtomicBoolean stop) throws Exception {
         {
             Pattern age = Pattern.compile("(verify_age)");
             Matcher ageMatch = age.matcher(html);
@@ -281,7 +262,7 @@ public class YouTubeParser extends VGetParser {
                 if ( encodMatch.find() ) {
                     String sline = encodMatch.group(1);
 
-                    extractUrlEncodedVideos(sNextVideoURL, sline, info, stop, notify);
+                    extractUrlEncodedVideos(sNextVideoURL, sline, info, stop);
                 }
 
                 // stream video
@@ -328,7 +309,7 @@ public class YouTubeParser extends VGetParser {
                 if ( encodMatch.find() ) {
                     String sline = encodMatch.group(1);
 
-                    extractUrlEncodedVideos(sNextVideoURL, sline, info, stop, notify);
+                    extractUrlEncodedVideos(sNextVideoURL, sline, info, stop);
                 }
 
                 // stream video
@@ -377,7 +358,7 @@ public class YouTubeParser extends VGetParser {
     }
 
     public void extractUrlEncodedVideos(List<YoutubeVideoDownload> sNextVideoURL, String sline, YouTubeInfo info,
-                                        AtomicBoolean stop, Runnable notify) throws Exception {
+                                        AtomicBoolean stop) throws Exception {
         String[] urlStrings = sline.split("url=");
 
         for ( String urlString : urlStrings ) {
@@ -434,7 +415,7 @@ public class YouTubeParser extends VGetParser {
                             sig = ss.decrypt();
                         } else {
                             Html5SignatureDecryptor ss = new Html5SignatureDecryptor(sig, info.getPlayerURI());
-                            sig = ss.decrypt(stop, notify);
+                            sig = ss.decrypt(stop);
                         }
                     }
                 }
@@ -453,8 +434,8 @@ public class YouTubeParser extends VGetParser {
     }
 
     @Override
-    public List<VideoFileInfo> extract(VideoInfo vinfo, AtomicBoolean stop, Runnable notify) {
-        List<YoutubeVideoDownload> videos = extractLinks((YouTubeInfo) vinfo, stop, notify);
+    public List<VideoFileInfo> extract(VideoInfo vinfo, AtomicBoolean stop) {
+        List<YoutubeVideoDownload> videos = extractLinks((YouTubeInfo) vinfo, stop);
 
         if ( videos.size() == 0 ) {
             // rare error:
@@ -471,7 +452,7 @@ public class YouTubeParser extends VGetParser {
         for ( int i = videos.size() - 1; i >= 0; i-- ) {
             if ( videos.get(i).getStream() == null ) {
                 videos.remove(i);
-            } else if ( (videos.get(i).getStream() instanceof StreamAudio) ) {
+            } else if ( (videos.get(i).getStream() instanceof AudioStream) ) {
                 audios.add(videos.remove(i));
             }
         }
@@ -520,8 +501,4 @@ public class YouTubeParser extends VGetParser {
                 + " increace VideoInfo.setVq to the maximum and retry download");
     }
 
-    @Override
-    public VideoInfo info(URL web) {
-        return new YouTubeInfo(web);
-    }
 }
