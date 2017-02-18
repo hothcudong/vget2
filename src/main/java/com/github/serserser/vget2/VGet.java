@@ -98,8 +98,8 @@ public class VGet {
         download(null, new AtomicBoolean(false));
     }
 
-    public void download(Parser user) {
-        download(user, new AtomicBoolean(false));
+    public void download(Parser parser) {
+        download(parser, new AtomicBoolean(false));
     }
 
     /**

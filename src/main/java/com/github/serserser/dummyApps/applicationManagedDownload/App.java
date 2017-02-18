@@ -12,6 +12,9 @@ import com.github.serserser.vget2.info.VideoFileInfo;
 import com.github.serserser.vget2.info.VideoInfo;
 import com.github.axet.wget.info.ex.DownloadInterruptedError;
 
+// TODO: [jgolda] The case of notifications about state should be solved in a different way
+// TODO: [jgolda] (maybe by registering a listener in downloader object)
+
 public class App {
 
     public static void main(String[] args) {
@@ -69,19 +72,6 @@ public class App {
             throw e;
         } catch (Exception e) {
             throw new RuntimeException(e);
-        }
-    }
-
-    public static String formatSpeed(long s) {
-        if (s > 0.1 * 1024 * 1024 * 1024) {
-            float f = s / 1024f / 1024f / 1024f;
-            return String.format("%.1f GB/s", f);
-        } else if (s > 0.1 * 1024 * 1024) {
-            float f = s / 1024f / 1024f;
-            return String.format("%.1f MB/s", f);
-        } else {
-            float f = s / 1024f;
-            return String.format("%.1f kb/s", f);
         }
     }
 }

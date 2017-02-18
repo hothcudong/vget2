@@ -46,9 +46,9 @@ public class YouTubeParser extends Parser {
         return extractLinks(info, new AtomicBoolean());
     }
 
-    public List<YoutubeVideoDownload> extractLinks(final YouTubeInfo info, final AtomicBoolean stop) {
+    protected List<YoutubeVideoDownload> extractLinks(final YouTubeInfo info, final AtomicBoolean stop) {
         try {
-            List<YoutubeVideoDownload> sNextVideoURL = new ArrayList<YoutubeVideoDownload>();
+            List<YoutubeVideoDownload> sNextVideoURL = new ArrayList<>();
 
             try {
                 streamCapture(sNextVideoURL, info, stop);
