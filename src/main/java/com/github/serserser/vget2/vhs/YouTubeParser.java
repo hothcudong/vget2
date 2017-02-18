@@ -99,15 +99,13 @@ public class YouTubeParser extends Parser {
 
     /**
      * Add resolution video for specific youtube link.
-     *
-     * @param sNextVideoURL download urls
      * @param url           download source url
      */
-    public void filter(List<YoutubeVideoDownload> sNextVideoURL, String itag, URL url) {
+    public YoutubeVideoDownload filter(String itag, URL url) {
         Integer i = Integer.decode(itag);
         GenericStreamInfo vd = itags.getStream(i);
 
-        sNextVideoURL.add(new YoutubeVideoDownload(vd, url));
+        return new YoutubeVideoDownload(vd, url);
     }
 
     public static String extractId(URL url) {
@@ -288,7 +286,7 @@ public class YouTubeParser extends Parser {
 
                             url = URLDecoder.decode(url, WGet.UTF8);
 
-                            filter(sNextVideoURL, itag, new URL(url));
+                            sNextVideoURL.add(filter(itag, new URL(url)));
                         }
                     }
                 }
@@ -335,7 +333,7 @@ public class YouTubeParser extends Parser {
 
                             url = URLDecoder.decode(url, WGet.UTF8);
 
-                            filter(sNextVideoURL, itag, new URL(url));
+                            sNextVideoURL.add(filter(itag, new URL(url)));
                         }
                     }
                 }
@@ -423,7 +421,7 @@ public class YouTubeParser extends Parser {
                 if ( url != null && itag != null && sig != null ) {
                     try {
                         url += "&signature=" + sig;
-                        filter(sNextVideoURL, itag, new URL(url));
+                        sNextVideoURL.add(filter(itag, new URL(url)));
                         continue;
                     } catch ( MalformedURLException e ) {
                         // ignore bad urls

@@ -24,6 +24,6 @@ public class YouTubeMPGParser extends YouTubeParser {
         if (vd.getContainer() == Container.WEBM)
             return;
 
-        super.filter(sNextVideoURL, itag, url);
+        sNextVideoURL.add(super.filter(itag, url));
     }
 }
