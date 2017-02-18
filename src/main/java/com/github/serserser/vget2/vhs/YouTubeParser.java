@@ -5,11 +5,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLDecoder;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -67,7 +63,7 @@ public class YouTubeParser extends Parser {
         }
     }
 
-    public List<YoutubeVideoDownload> streamCapture(final YouTubeInfo info, final AtomicBoolean stop) throws Exception {
+    private List<YoutubeVideoDownload> streamCapture(final YouTubeInfo info, final AtomicBoolean stop) throws Exception {
         List<YoutubeVideoDownload> sNextVideoURL = new ArrayList<>();
 
         String html;
@@ -95,7 +91,8 @@ public class YouTubeParser extends Parser {
 
     /**
      * Add resolution video for specific youtube link.
-     * @param url           download source url
+     *
+     * @param url download source url
      */
     public YoutubeVideoDownload filter(String itag, URL url) {
         Integer i = Integer.decode(itag);
@@ -104,7 +101,7 @@ public class YouTubeParser extends Parser {
         return new YoutubeVideoDownload(vd, url);
     }
 
-    public static String extractId(URL url) {
+    private static String extractId(URL url) {
         {
             Pattern u = Pattern.compile("youtube.com/watch?.*v=([^&]*)");
             Matcher um = u.matcher(url.toString());
@@ -124,12 +121,8 @@ public class YouTubeParser extends Parser {
 
     /**
      * allows to download age restricted videos
-     *
-     * @param info
-     * @param stop
-     * @throws Exception
      */
-    public List<YoutubeVideoDownload> extractEmbedded(final YouTubeInfo info, final AtomicBoolean stop) throws Exception {
+    private List<YoutubeVideoDownload> extractEmbedded(final YouTubeInfo info, final AtomicBoolean stop) throws Exception {
 
         List<YoutubeVideoDownload> sNextVideoURL = new ArrayList<>();
 
@@ -191,7 +184,7 @@ public class YouTubeParser extends Parser {
         return sNextVideoURL;
     }
 
-    public void extractIcon(VideoInfo info, String html) {
+    private void extractIcon(VideoInfo info, String html) {
         try {
             Pattern title = Pattern.compile("itemprop=\"thumbnailUrl\" href=\"(.*)\"");
             Matcher titleMatch = title.matcher(html);
@@ -207,9 +200,9 @@ public class YouTubeParser extends Parser {
         }
     }
 
-    public static Map<String, String> getQueryMap(String qs) {
+    private static Map<String, String> getQueryMap(String qs) {
         try {
-            HashMap<String, String> map = new HashMap<String, String>();
+            HashMap<String, String> map = new HashMap<>();
             qs = qs.trim();
             String[] pairs = qs.split("&");
             for ( String pair : pairs ) {
@@ -223,7 +216,7 @@ public class YouTubeParser extends Parser {
         }
     }
 
-    public List<YoutubeVideoDownload> extractHtmlInfo(YouTubeInfo info, String html, AtomicBoolean stop) throws Exception {
+    private List<YoutubeVideoDownload> extractHtmlInfo(YouTubeInfo info, String html, AtomicBoolean stop) throws Exception {
 
         List<YoutubeVideoDownload> sNextVideoURL = new ArrayList<>();
 
@@ -362,8 +355,8 @@ public class YouTubeParser extends Parser {
         return sNextVideoURL;
     }
 
-    public List<YoutubeVideoDownload> extractUrlEncodedVideos(String sline, YouTubeInfo info,
-                                        AtomicBoolean stop) throws Exception {
+    private List<YoutubeVideoDownload> extractUrlEncodedVideos(String sline, YouTubeInfo info,
+                                                               AtomicBoolean stop) throws Exception {
         String[] urlStrings = sline.split("url=");
 
         List<YoutubeVideoDownload> sNextVideoURL = new ArrayList<>();
@@ -431,7 +424,6 @@ public class YouTubeParser extends Parser {
                     try {
                         url += "&signature=" + sig;
                         sNextVideoURL.add(filter(itag, new URL(url)));
-                        continue;
                     } catch ( MalformedURLException e ) {
                         // ignore bad urls
                     }
@@ -456,7 +448,7 @@ public class YouTubeParser extends Parser {
             throw new DownloadRetry("empty video download list," + " wait until youtube will process the video");
         }
 
-        List<YoutubeVideoDownload> audios = new ArrayList<YoutubeVideoDownload>();
+        List<YoutubeVideoDownload> audios = new ArrayList<>();
 
         for ( int i = videos.size() - 1; i >= 0; i-- ) {
             if ( videos.get(i).getStream() == null ) {
@@ -477,8 +469,8 @@ public class YouTubeParser extends Parser {
 
             VideoFileInfo info = new VideoFileInfo(v.getUrl());
 
-            if ( v.getStream()instanceof StreamCombined ) {
-                vinfo.setInfo(Arrays.asList(info));
+            if ( v.getStream() instanceof StreamCombined ) {
+                vinfo.setInfo(Collections.singletonList(info));
             }
 
             if ( v.getStream() instanceof StreamVideo ) {
@@ -487,7 +479,7 @@ public class YouTubeParser extends Parser {
                     vinfo.setInfo(Arrays.asList(info, info2));
                 } else {
                     // no audio stream?
-                    vinfo.setInfo(Arrays.asList(info));
+                    vinfo.setInfo(Collections.singletonList(info));
                 }
             }
 
@@ -497,7 +489,7 @@ public class YouTubeParser extends Parser {
 
         for ( int i = 0; i < audios.size(); ) { // only audio mode?
             VideoFileInfo info = new VideoFileInfo(audios.get(i).getUrl());
-            vinfo.setInfo(Arrays.asList(info));
+            vinfo.setInfo(Collections.singletonList(info));
 
             vinfo.setSource(info.getSource());
             return vinfo.getInfo();
