@@ -3,6 +3,7 @@ package com.github.serserser.vget2.vhs;
 import java.net.URL;
 import java.util.List;
 
+import com.github.serserser.vget2.vhs.parsers.youtube.YouTubeParser;
 import com.github.serserser.vget2.vhs.youtube.YoutubeITags;
 import com.github.serserser.vget2.vhs.youtube.params.Container;
 import com.github.serserser.vget2.vhs.youtube.params.GenericStreamInfo;

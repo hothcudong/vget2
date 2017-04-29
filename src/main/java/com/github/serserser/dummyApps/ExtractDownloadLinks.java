@@ -5,7 +5,7 @@ import java.util.List;
 
 import com.github.serserser.vget2.vhs.youtube.YoutubeVideoDownload;
 import com.github.serserser.vget2.vhs.YouTubeInfo;
-import com.github.serserser.vget2.vhs.YouTubeParser;
+import com.github.serserser.vget2.vhs.parsers.youtube.YouTubeParser;
 
 public class ExtractDownloadLinks {
 

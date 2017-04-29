@@ -3,7 +3,7 @@ package com.github.serserser.vget2.info;
 import com.github.serserser.vget2.vhs.VimeoInfo;
 import com.github.serserser.vget2.vhs.VimeoParser;
 import com.github.serserser.vget2.vhs.YouTubeInfo;
-import com.github.serserser.vget2.vhs.YouTubeParser;
+import com.github.serserser.vget2.vhs.parsers.youtube.YouTubeParser;
 
 import java.net.URL;
 

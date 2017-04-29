@@ -9,6 +9,7 @@ import com.github.serserser.vget2.info.VideoFileInfo;
 import com.github.serserser.vget2.info.VideoInfo;
 import com.github.axet.wget.info.ex.DownloadError;
 import com.github.axet.wget.info.ex.DownloadRetry;
+import com.github.serserser.vget2.vhs.parsers.youtube.YouTubeParser;
 import com.github.serserser.vget2.vhs.youtube.YoutubeVideoDownload;
 import com.github.serserser.vget2.vhs.youtube.params.StreamCombined;
 import com.github.serserser.vget2.vhs.youtube.params.YoutubeQuality;

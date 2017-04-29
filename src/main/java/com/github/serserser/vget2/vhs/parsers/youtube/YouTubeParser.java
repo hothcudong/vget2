@@ -1,4 +1,4 @@
-package com.github.serserser.vget2.vhs;
+package com.github.serserser.vget2.vhs.parsers.youtube;
 
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
@@ -14,12 +14,15 @@ import com.github.serserser.vget2.exceptions.DownloadEmptyTitle;
 import com.github.serserser.vget2.info.Parser;
 import com.github.serserser.vget2.info.VideoFileInfo;
 import com.github.serserser.vget2.info.VideoInfo;
-import com.github.serserser.vget2.vhs.decryption.Html5SignatureDecryptor;
-import com.github.serserser.vget2.vhs.decryption.SignatureDecryptor;
+import com.github.serserser.vget2.vhs.YouTubeInfo;
+import com.github.serserser.vget2.vhs.YoutubeVideoContentFirstComparator;
 import com.github.serserser.vget2.vhs.exceptions.AgeException;
 import com.github.serserser.vget2.vhs.exceptions.EmbeddingDisabled;
 import com.github.serserser.vget2.vhs.exceptions.VideoDeleted;
 import com.github.serserser.vget2.vhs.exceptions.VideoUnavailablePlayer;
+import com.github.serserser.vget2.vhs.parsers.youtube.extract.DecryptingExtractor;
+import com.github.serserser.vget2.vhs.parsers.youtube.extract.PatternBasedExtractor;
+import com.github.serserser.vget2.vhs.parsers.youtube.extract.SimpleExtractor;
 import com.github.serserser.vget2.vhs.youtube.YoutubeITags;
 import com.github.serserser.vget2.vhs.youtube.YoutubeVideoDownload;
 import com.github.serserser.vget2.vhs.youtube.params.*;
@@ -33,6 +36,74 @@ import com.github.axet.wget.info.ex.DownloadRetry;
 public class YouTubeParser extends Parser {
 
     private YoutubeITags itags;
+
+    @Override
+    public List<VideoFileInfo> extract(VideoInfo vinfo, AtomicBoolean stop) {
+        List<YoutubeVideoDownload> videos = extractLinks((YouTubeInfo) vinfo, stop);
+
+        if ( videos.size() == 0 ) {
+            // rare error:
+            //
+            // The live recording you're trying to play is still being processed
+            // and will be available soon. Sorry, please try again later.
+            //
+            // retry. since youtube may already rendrered propertly quality.
+            throw new DownloadRetry("empty video download list," + " wait until youtube will process the video");
+        }
+
+        List<YoutubeVideoDownload> audios = new ArrayList<>();
+
+        for ( int i = videos.size() - 1; i >= 0; i-- ) {
+            if ( videos.get(i).getStream() == null ) {
+                videos.remove(i);
+            } else if ( (videos.get(i).getStream() instanceof AudioStream) ) {
+                audios.add(videos.remove(i));
+            }
+        }
+
+        videos.sort(new YoutubeVideoContentFirstComparator());
+        audios.sort(new YoutubeVideoContentFirstComparator());
+
+        for ( int i = 0; i < videos.size(); ) {
+            YoutubeVideoDownload v = videos.get(i);
+
+            YouTubeInfo yinfo = (YouTubeInfo) vinfo;
+            yinfo.setStreamInfo(v.getStream());
+
+            VideoFileInfo info = new VideoFileInfo(v.getUrl());
+
+            if ( v.getStream() instanceof StreamCombined ) {
+                vinfo.setInfo(Collections.singletonList(info));
+            }
+
+            if ( v.getStream() instanceof StreamVideo ) {
+                if ( audios.size() > 0 ) {
+                    VideoFileInfo info2 = new VideoFileInfo(audios.get(0).getUrl()); // take first (highest quality)
+                    vinfo.setInfo(Arrays.asList(info, info2));
+                } else {
+                    // no audio stream?
+                    vinfo.setInfo(Collections.singletonList(info));
+                }
+            }
+
+            vinfo.setSource(v.getUrl());
+            return vinfo.getInfo();
+        }
+
+        for ( int i = 0; i < audios.size(); ) { // only audio mode?
+            VideoFileInfo info = new VideoFileInfo(audios.get(i).getUrl());
+            vinfo.setInfo(Collections.singletonList(info));
+
+            vinfo.setSource(info.getSource());
+            return vinfo.getInfo();
+        }
+
+        // throw download stop if user choice not maximum quality and we have no
+        // video rendered by youtube
+
+        throw new DownloadError("no video with required quality found,"
+                + " increace VideoInfo.setVq to the maximum and retry download");
+    }
 
     public YouTubeParser() {
         itags = YoutubeITags.getInstance();
@@ -67,22 +138,7 @@ public class YouTubeParser extends Parser {
         List<YoutubeVideoDownload> sNextVideoURL = new ArrayList<>();
 
         String html;
-        html = WGet.getHtml(info.getWeb(), new WGet.HtmlLoader() {
-            @Override
-            public void notifyRetry(int retry, int delay, Throwable e) {
-                info.setRetrying(retry, delay, e);
-            }
-
-            @Override
-            public void notifyDownloading() {
-                info.setState(VideoInfo.States.DOWNLOADING);
-            }
-
-            @Override
-            public void notifyMoved() {
-                info.setState(VideoInfo.States.RETRYING);
-            }
-        }, stop);
+        html = WGet.getHtml(info.getWeb());
         sNextVideoURL.addAll(extractHtmlInfo(info, html, stop));
         extractIcon(info, html);
 
@@ -174,7 +230,7 @@ public class YouTubeParser extends Parser {
 
         String url_encoded_fmt_stream_map = URLDecoder.decode(map.get("url_encoded_fmt_stream_map"), WGet.UTF8);
 
-        sNextVideoURL.addAll(extractUrlEncodedVideos(url_encoded_fmt_stream_map, info, stop));
+        sNextVideoURL.addAll(extractUrlEncodedVideos(url_encoded_fmt_stream_map));
 
         // 'iurlmaxresæ or 'iurlsd' or 'thumbnail_url'
         String icon = map.get("thumbnail_url");
@@ -257,7 +313,7 @@ public class YouTubeParser extends Parser {
                 if ( encodMatch.find() ) {
                     String sline = encodMatch.group(1);
 
-                    sNextVideoURL.addAll(extractUrlEncodedVideos(sline, info, stop));
+                    sNextVideoURL.addAll(extractUrlEncodedVideos(sline));
                 }
 
                 // stream video
@@ -304,7 +360,7 @@ public class YouTubeParser extends Parser {
                 if ( encodMatch.find() ) {
                     String sline = encodMatch.group(1);
 
-                    sNextVideoURL.addAll(extractUrlEncodedVideos(sline, info, stop));
+                    sNextVideoURL.addAll(extractUrlEncodedVideos(sline));
                 }
 
                 // stream video
@@ -355,8 +411,7 @@ public class YouTubeParser extends Parser {
         return sNextVideoURL;
     }
 
-    private List<YoutubeVideoDownload> extractUrlEncodedVideos(String sline, YouTubeInfo info,
-                                                               AtomicBoolean stop) throws Exception {
+    private List<YoutubeVideoDownload> extractUrlEncodedVideos(String sline) throws Exception {
         String[] urlStrings = sline.split("url=");
 
         List<YoutubeVideoDownload> sNextVideoURL = new ArrayList<>();
@@ -367,66 +422,19 @@ public class YouTubeParser extends Parser {
             String urlFull = URLDecoder.decode(urlString, WGet.UTF8);
 
             // universal request
-            {
-                String url = null;
-                {
-                    Pattern link = Pattern.compile("([^&,]*)[&,]");
-                    Matcher linkMatch = link.matcher(urlString);
-                    if ( linkMatch.find() ) {
-                        url = linkMatch.group(1);
-                        url = URLDecoder.decode(url, WGet.UTF8);
-                    }
-                }
 
-                String itag = null;
-                {
-                    Pattern link = Pattern.compile("itag=(\\d+)");
-                    Matcher linkMatch = link.matcher(urlFull);
-                    if ( linkMatch.find() ) {
-                        itag = linkMatch.group(1);
-                    }
-                }
+            String url = SimpleExtractor.ofPattern("([^&,]*)[&,]").extract(urlString);
 
-                String sig = null;
+            String itag = SimpleExtractor.ofPattern("itag=(\\d+)").extract(urlFull);
 
-                if ( sig == null ) {
-                    Pattern link = Pattern.compile("&signature=([^&,]*)");
-                    Matcher linkMatch = link.matcher(urlFull);
-                    if ( linkMatch.find() ) {
-                        sig = linkMatch.group(1);
-                    }
-                }
+            String sig = extractSignature(urlFull);
 
-                if ( sig == null ) {
-                    Pattern link = Pattern.compile("sig=([^&,]*)");
-                    Matcher linkMatch = link.matcher(urlFull);
-                    if ( linkMatch.find() ) {
-                        sig = linkMatch.group(1);
-                    }
-                }
-
-                if ( sig == null ) {
-                    Pattern link = Pattern.compile("[&,]s=([^&,]*)");
-                    Matcher linkMatch = link.matcher(urlFull);
-                    if ( linkMatch.find() ) {
-                        sig = linkMatch.group(1);
-                        if ( info.getPlayerURI() == null ) {
-                            SignatureDecryptor ss = new SignatureDecryptor(sig);
-                            sig = ss.decrypt();
-                        } else {
-                            Html5SignatureDecryptor ss = new Html5SignatureDecryptor(sig, info.getPlayerURI());
-                            sig = ss.decrypt(stop);
-                        }
-                    }
-                }
-
-                if ( url != null && itag != null && sig != null ) {
-                    try {
-                        url += "&signature=" + sig;
-                        sNextVideoURL.add(filter(itag, new URL(url)));
-                    } catch ( MalformedURLException e ) {
-                        // ignore bad urls
-                    }
+            if ( url != null && itag != null && sig != null ) {
+                try {
+                    String urlWithSignature = url + "&signature=" + sig;
+                    sNextVideoURL.add(filter(itag, new URL(urlWithSignature)));
+                } catch ( MalformedURLException e ) {
+                    // ignore bad urls
                 }
             }
         }
@@ -434,72 +442,13 @@ public class YouTubeParser extends Parser {
         return sNextVideoURL;
     }
 
-    @Override
-    public List<VideoFileInfo> extract(VideoInfo vinfo, AtomicBoolean stop) {
-        List<YoutubeVideoDownload> videos = extractLinks((YouTubeInfo) vinfo, stop);
+    private String extractSignature(String urlFull) {
+        PatternBasedExtractor extractor = PatternBasedExtractor.builder()
+                .addExtractor(new SimpleExtractor("&signature=([^&,]*)"))
+                .addExtractor(new SimpleExtractor("sig=([^&,]*)"))
+                .addExtractor(new DecryptingExtractor("[&,]s=([^&,]*)"))
+                .build();
 
-        if ( videos.size() == 0 ) {
-            // rare error:
-            //
-            // The live recording you're trying to play is still being processed
-            // and will be available soon. Sorry, please try again later.
-            //
-            // retry. since youtube may already rendrered propertly quality.
-            throw new DownloadRetry("empty video download list," + " wait until youtube will process the video");
-        }
-
-        List<YoutubeVideoDownload> audios = new ArrayList<>();
-
-        for ( int i = videos.size() - 1; i >= 0; i-- ) {
-            if ( videos.get(i).getStream() == null ) {
-                videos.remove(i);
-            } else if ( (videos.get(i).getStream() instanceof AudioStream) ) {
-                audios.add(videos.remove(i));
-            }
-        }
-
-        videos.sort(new YoutubeVideoContentFirstComparator());
-        audios.sort(new YoutubeVideoContentFirstComparator());
-
-        for ( int i = 0; i < videos.size(); ) {
-            YoutubeVideoDownload v = videos.get(i);
-
-            YouTubeInfo yinfo = (YouTubeInfo) vinfo;
-            yinfo.setStreamInfo(v.getStream());
-
-            VideoFileInfo info = new VideoFileInfo(v.getUrl());
-
-            if ( v.getStream() instanceof StreamCombined ) {
-                vinfo.setInfo(Collections.singletonList(info));
-            }
-
-            if ( v.getStream() instanceof StreamVideo ) {
-                if ( audios.size() > 0 ) {
-                    VideoFileInfo info2 = new VideoFileInfo(audios.get(0).getUrl()); // take first (highest quality)
-                    vinfo.setInfo(Arrays.asList(info, info2));
-                } else {
-                    // no audio stream?
-                    vinfo.setInfo(Collections.singletonList(info));
-                }
-            }
-
-            vinfo.setSource(v.getUrl());
-            return vinfo.getInfo();
-        }
-
-        for ( int i = 0; i < audios.size(); ) { // only audio mode?
-            VideoFileInfo info = new VideoFileInfo(audios.get(i).getUrl());
-            vinfo.setInfo(Collections.singletonList(info));
-
-            vinfo.setSource(info.getSource());
-            return vinfo.getInfo();
-        }
-
-        // throw download stop if user choice not maximum quality and we have no
-        // video rendered by youtube
-
-        throw new DownloadError("no video with required quality found,"
-                + " increace VideoInfo.setVq to the maximum and retry download");
+        return extractor.extract(urlFull);
     }
-
 }
