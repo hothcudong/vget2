@@ -9,7 +9,7 @@ import com.github.serserser.vget2.vhs.youtube.params.*;
 public class YouTubeInfo extends VideoInfo {
 
     private GenericStreamInfo vq;
-    private URI playerURI;
+    private String playerURIString;
 
     public YouTubeInfo(URL web) {
         super(web);
@@ -23,11 +23,11 @@ public class YouTubeInfo extends VideoInfo {
         this.vq = vq;
     }
 
-    public URI getPlayerURI() {
-        return playerURI;
+    public String getPlayerURIString() {
+        return playerURIString;
     }
 
-    public void setPlayerURI(URI playerURI) {
-        this.playerURI = playerURI;
+    public void setPlayerURIString(String playerURIString) {
+        this.playerURIString = playerURIString;
     }
 }

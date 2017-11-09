@@ -1,5 +1,7 @@
 package com.github.serserser.vget2.info;
 
+import org.apache.commons.collections.CollectionUtils;
+
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,7 +16,7 @@ public class VideoInfo {
     private URL web;
 
     private URL source;
-    private List<VideoFileInfo> info = new ArrayList<VideoFileInfo>();
+    private List<VideoFileInfo> info = new ArrayList<>();
     private String title;
     private URL icon;
 
@@ -41,7 +43,7 @@ public class VideoInfo {
      * @return true - if extract() already been called
      */
     synchronized public boolean empty() {
-        return info == null;
+        return CollectionUtils.isEmpty(info);
     }
 
     /**

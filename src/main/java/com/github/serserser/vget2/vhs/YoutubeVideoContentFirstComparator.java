@@ -1,7 +1,7 @@
 package com.github.serserser.vget2.vhs;
 
 import com.github.serserser.vget2.vhs.youtube.YoutubeVideoDownload;
-import com.github.serserser.vget2.vhs.youtube.params.AudioStream;
+import com.github.serserser.vget2.vhs.youtube.params.StreamAudio;
 import com.github.serserser.vget2.vhs.youtube.params.StreamCombined;
 import com.github.serserser.vget2.vhs.youtube.params.StreamVideo;
 
@@ -17,8 +17,8 @@ public class YoutubeVideoContentFirstComparator implements Comparator<YoutubeVid
             StreamVideo c1 = (StreamVideo) o1.getStream();
             return c1.vq.ordinal();
         }
-        if (o1.getStream() instanceof AudioStream ) {
-            AudioStream c1 = (AudioStream) o1.getStream();
+        if (o1.getStream() instanceof StreamAudio ) {
+            StreamAudio c1 = (StreamAudio) o1.getStream();
             return c1.getAq().ordinal();
         }
         throw new RuntimeException("bad video array type");

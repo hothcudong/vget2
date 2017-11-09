@@ -1,13 +1,13 @@
 package com.github.serserser.vget2.vhs.youtube.params;
 
-public class AudioStream extends GenericStreamInfo {
+public class StreamAudio extends GenericStreamInfo {
     private Encoding audio;
     private AudioQuality aq;
 
-    public AudioStream() {
+    public StreamAudio() {
     }
 
-    public AudioStream(Container c, Encoding a, AudioQuality q) {
+    public StreamAudio(Container c, Encoding a, AudioQuality q) {
         super(c);
         this.audio = a;
         this.aq = q;

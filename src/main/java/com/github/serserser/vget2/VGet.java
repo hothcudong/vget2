@@ -34,7 +34,7 @@ import com.github.axet.wget.info.ex.DownloadRetry;
 
 public class VGet {
 
-    ServiceProvider parserProvider;
+    ServiceProvider serviceProvider;
 
     /*---------------------------------------------------------------------------------------------*/
 
@@ -60,18 +60,9 @@ public class VGet {
     }
 
     public VGet(URL source, File targetDir) {
-        parserProvider = new ServiceProvider();
-        this.info = parserProvider.getInfoForUrl(source);
+        serviceProvider = new ServiceProvider();
+        this.info = serviceProvider.getInfoForUrl(source);
         this.targetDir = targetDir;
-    }
-
-    /**
-     * Set targetFile manually after you call .extract()
-     *
-     * @param info download info.
-     */
-    public VGet(VideoInfo info) {
-        this.info = info;
     }
 
     /**
@@ -90,7 +81,7 @@ public class VGet {
         this.targetDir = targetDir;
     }
 
-    public VideoInfo getVideo() {
+    public VideoInfo getVideoInfo() {
         return info;
     }
 
@@ -98,37 +89,8 @@ public class VGet {
         download(null, new AtomicBoolean(false));
     }
 
-    public void download(Parser parser) {
-        download(parser, new AtomicBoolean(false));
-    }
-
-    /**
-     * Drop all forbidden characters from filename
-     *
-     * @param f input file name
-     * @return normalized file name
-     */
-    private static String replaceBadChars(String f) {
-        String replace = " ";
-        f = f.replaceAll("/", replace);
-        f = f.replaceAll("\\\\", replace);
-        f = f.replaceAll(":", replace);
-        f = f.replaceAll("\\?", replace);
-        f = f.replaceAll("\\\"", replace);
-        f = f.replaceAll("\\*", replace);
-        f = f.replaceAll("<", replace);
-        f = f.replaceAll(">", replace);
-        f = f.replaceAll("\\|", replace);
-        f = f.trim();
-        f = StringUtils.removeEnd(f, ".");
-        f = f.trim();
-
-        String ff;
-        while ( !(ff = f.replaceAll("  ", " ")).equals(f) ) {
-            f = ff;
-        }
-
-        return f;
+    public void download(VideoInfo videoInfo) {
+        download(videoInfo, new AtomicBoolean(false));
     }
 
     private static String maxFileNameLength(String str) {
@@ -159,14 +121,14 @@ public class VGet {
         return null;
     }
 
-    private void retry(Parser user, AtomicBoolean stop, Throwable e) {
+    private void retry(VideoInfo videoInfo, AtomicBoolean stop, Throwable exc) {
         boolean retracted = false;
         int retry = 0;
 
         while ( !retracted ) {
             retry++; // first retry
             if ( !RetryWrap.retry(retry) ) {
-                throw new DownloadError(e);
+                throw new DownloadError(exc);
             }
             for ( int i = RetryWrap.RETRY_DELAY; i >= 0; i-- ) {
                 if ( stop.get() )
@@ -174,7 +136,7 @@ public class VGet {
                 if ( Thread.currentThread().isInterrupted() )
                     throw new DownloadInterruptedError("interrupted");
 
-                info.setRetrying(retry, i, e);
+                videoInfo.setRetrying(retry, i, exc);
 
                 try {
                     Thread.sleep(1000);
@@ -188,18 +150,10 @@ public class VGet {
                 // proxy server is down we have to try to extract new info
                 // and try to resume download
 
-                List<VideoFileInfo> infoOldList = info.getInfo();
-
-                Parser parser;
-                if ( user == null ) {
-                    parser = parserProvider.getParserForUrl(info.getWeb());
-                } else {
-                    parser = user;
-                }
-                parser.info(info, stop);
+                List<VideoFileInfo> infoOldList = videoInfo.getInfo();
 
                 if ( infoOldList != null ) {
-                    List<VideoFileInfo> infoNewList = info.getInfo();
+                    List<VideoFileInfo> infoNewList = videoInfo.getInfo();
 
                     for ( VideoFileInfo infoOld : infoOldList ) {
                         DownloadInfo infoNew = getNewInfo(infoNewList, infoOld);
@@ -217,17 +171,18 @@ public class VGet {
                 retracted = true;
             } catch ( DownloadIOCodeError ee ) {
                 if ( retry(ee) ) {
-                    info.setState(VideoInfo.States.RETRYING, ee);
+                    videoInfo.setState(VideoInfo.States.RETRYING, ee);
                 } else {
                     throw ee;
                 }
             } catch ( DownloadRetry ee ) {
-                info.setState(VideoInfo.States.RETRYING, ee);
+                videoInfo.setState(VideoInfo.States.RETRYING, ee);
             }
         }
     }
 
     // return ".ext" ex: ".mp3" ".webm"
+
     private String getExt(DownloadInfo dinfo) {
         String ct = dinfo.getContentType();
         if ( ct == null )
@@ -239,8 +194,8 @@ public class VGet {
 
         return "." + ct.replaceAll("x-", "").toLowerCase();
     }
-
     // return ".content.ext" ex: ".audio.mp3"
+
     private String getContentExt(DownloadInfo dinfo) {
         String ct = dinfo.getContentType();
         if ( ct == null )
@@ -253,10 +208,10 @@ public class VGet {
         return "." + ct.replaceAll("x-", "").toLowerCase();
     }
 
-    private boolean exists(File f, AtomicBoolean conflict) {
+    private boolean exists(VideoInfo videoInfo, File f, AtomicBoolean conflict) {
         if ( f.exists() )
             return true;
-        for ( VideoFileInfo dinfo : info.getInfo() ) {
+        for ( VideoFileInfo dinfo : videoInfo.getInfo() ) {
             if ( dinfo.targetFile != null && dinfo.targetFile.equals(f) ) {
                 if ( conflict != null )
                     conflict.set(true);
@@ -266,9 +221,53 @@ public class VGet {
         return false;
     }
 
-    private void targetFileForce(VideoFileInfo dinfo) {
+
+    // return true, video download have the same ".ext" for multiple videos
+    /**
+     * Drop all forbidden characters from filename
+     *
+     * @param f input file name
+     * @return normalized file name
+     */
+    private static String replaceBadChars(String f) {
+        String replace = " ";
+        f = f.replaceAll("/", replace);
+        f = f.replaceAll("\\\\", replace);
+        f = f.replaceAll(":", replace);
+        f = f.replaceAll("\\?", replace);
+        f = f.replaceAll("\\\"", replace);
+        f = f.replaceAll("\\*", replace);
+        f = f.replaceAll("<", replace);
+        f = f.replaceAll(">", replace);
+        f = f.replaceAll("\\|", replace);
+        f = f.trim();
+        f = StringUtils.removeEnd(f, ".");
+        f = f.trim();
+
+        String ff;
+        while ( !(ff = f.replaceAll("  ", " ")).equals(f) ) {
+            f = ff;
+        }
+
+        return f;
+    }
+
+    /**
+     * set targetFile for specified VideoFileInfo.
+     *
+     * @param videoInfo
+     * @param dinfo    VideoFileInfo to set targetFile for
+     * @param ext      File extension. call getExt() or getContentExt()
+     * @param conflict True if we have same file extension for multiply files. File name will be renamed to " (1).ext"
+     */
+    private void targetFile(VideoInfo videoInfo, VideoFileInfo dinfo, String ext, AtomicBoolean conflict) {
+        targetFileForce(videoInfo, dinfo);
+        targetFileExt(videoInfo, dinfo, ext, conflict);
+    }
+
+    private void targetFileForce(VideoInfo videoInfo, VideoFileInfo dinfo) {
         if ( targetForce != null ) {
-            if ( exists(targetForce, null) ) {
+            if ( exists(videoInfo, targetForce, null) ) {
                 // VGet v = new VGet(videoinfo, path);
                 // v.extract(user, stop, notify);
                 // List<VideoFileInfo> list = videoinfo.getInfo();
@@ -301,8 +300,7 @@ public class VGet {
         }
     }
 
-    // return true, video download have the same ".ext" for multiple videos
-    private void targetFileExt(VideoFileInfo dinfo, String ext, AtomicBoolean conflict) {
+    private void targetFileExt(VideoInfo videoInfo, VideoFileInfo dinfo, String ext, AtomicBoolean conflict) {
         if ( dinfo.targetFile == null ) {
             if ( targetDir == null ) {
                 throw new RuntimeException("Set download file or directory first");
@@ -312,7 +310,7 @@ public class VGet {
 
             Integer idupcount = 0;
 
-            String sfilename = replaceBadChars(info.getTitle());
+            String sfilename = replaceBadChars(videoInfo.getTitle());
 
             sfilename = maxFileNameLength(sfilename);
 
@@ -321,7 +319,7 @@ public class VGet {
                 String add = idupcount > 0 ? " (".concat(idupcount.toString()).concat(")") : "";
                 f = new File(targetDir, sfilename + add + ext);
                 idupcount += 1;
-            } while ( exists(f, conflict) );
+            } while ( exists(videoInfo, f, conflict) );
 
             dinfo.targetFile = f;
 
@@ -329,18 +327,6 @@ public class VGet {
             // start over.
             dinfo.reset();
         }
-    }
-
-    /**
-     * set targetFile for specified VideoFileInfo.
-     *
-     * @param dinfo    VideoFileInfo to set targetFile for
-     * @param ext      File extension. call getExt() or getContentExt()
-     * @param conflict True if we have same file extension for multiply files. File name will be renamed to " (1).ext"
-     */
-    private void targetFile(VideoFileInfo dinfo, String ext, AtomicBoolean conflict) {
-        targetFileForce(dinfo);
-        targetFileExt(dinfo, ext, conflict);
     }
 
     private boolean retry(Throwable e) {
@@ -365,57 +351,50 @@ public class VGet {
      * @return return status of download information. subclassing for VideoInfo.empty();
      */
     private boolean empty() {
-        return getVideo().empty();
+        return getVideoInfo().empty();
     }
 
     public void extract() {
-        extract(new AtomicBoolean(false));
-    }
-
-    private void extract(AtomicBoolean stop) {
-        extract(null, stop);
+        extract(null, new AtomicBoolean(false));
     }
 
     /**
      * extract video information, retry until success
      *
-     * @param inputParser user info object
      * @param stop        stop signal boolean
      */
-    public void extract(Parser inputParser, AtomicBoolean stop) {
-        Parser parser;
 
-        try {
-            while ( !done(stop) ) {
-                try {
-                    if ( info.empty() ) {
-                        info.setState(VideoInfo.States.EXTRACTING);
-                        if ( inputParser == null ) {
-                            parser = parserProvider.getParserForUrl(info.getWeb());
-                        } else {
-                            parser = inputParser;
-                        }
-                        parser.info(info, stop);
-                        info.setState(VideoInfo.States.EXTRACTING_DONE);
-                    }
-                    return;
-                } catch ( DownloadRetry | DownloadEmptyTitle | DownloadIOError e ) {
-                    retry(inputParser, stop, e);
-                } catch ( DownloadMultipartError e ) {
-                    checkFileNotFound(e);
-                    checkRetry(e);
-                    retry(inputParser, stop, e);
-                } catch ( DownloadIOCodeError e ) {
-                    if ( retry(e) )
-                        retry(inputParser, stop, e);
-                    else
-                        throw e;
+
+
+    public VideoInfo extract(URL url, AtomicBoolean stop) {
+        VideoInfo info = serviceProvider.getInfoForUrl(url);
+        Parser parser = serviceProvider.getParserForUrl(url);
+
+        while ( !done(stop) ) {
+            try {
+                if ( info.empty() ) {
+                    info.setState(VideoInfo.States.EXTRACTING);
+                    parser.info(info, stop);
+                    info.setState(VideoInfo.States.EXTRACTING_DONE);
                 }
+                return info;
+            } catch ( DownloadRetry | DownloadEmptyTitle | DownloadIOError e ) {
+                retry(info, stop, e);
+            } catch ( DownloadMultipartError e ) {
+                checkFileNotFound(e);
+                checkRetry(e);
+                retry(info, stop, e);
+            } catch ( DownloadIOCodeError e ) {
+                if ( retry(e) )
+                    retry(info, stop, e);
+                else
+                    throw e;
+            } catch ( DownloadInterruptedError e ) {
+                info.setState(VideoInfo.States.STOP);
+                throw e;
             }
-        } catch ( DownloadInterruptedError e ) {
-            info.setState(VideoInfo.States.STOP);
-            throw e;
         }
+        return info;
     }
 
     private void checkRetry(DownloadMultipartError e) {
@@ -469,16 +448,11 @@ public class VGet {
         download(null, stop);
     }
 
-    public void download(Parser user, final AtomicBoolean stop) {
+    private void download(VideoInfo videoInfo, final AtomicBoolean stop) {
         try {
-            if ( empty() ) {
-                extract(user, stop);
-            }
-
-            // retry exception loop
             while ( !done(stop) ) {
                 try {
-                    final List<VideoFileInfo> dinfoList = info.getInfo();
+                    final List<VideoFileInfo> dinfoList = videoInfo.getInfo();
 
                     final LimitThreadPool l = new LimitThreadPool(THREAD_COUNT);
 
@@ -513,7 +487,7 @@ public class VGet {
                         // 1) ".ext"
                         for ( final VideoFileInfo dinfo : targetNull ) {
                             dinfo.targetFile = null;
-                            targetFile(dinfo, getExt(dinfo), conflict);
+                            targetFile(videoInfo, dinfo, getExt(dinfo), conflict);
                         }
                         // conflict means we have " (1).ext" download. try add ".content.ext" as extension
                         // to make file names looks more pretty.
@@ -522,7 +496,7 @@ public class VGet {
                             // 2) ".content.ext"
                             for ( final VideoFileInfo dinfo : targetNull ) {
                                 dinfo.targetFile = null;
-                                targetFile(dinfo, getContentExt(dinfo), conflict);
+                                targetFile(videoInfo, dinfo, getContentExt(dinfo), conflict);
                             }
                         }
                     }
@@ -545,10 +519,10 @@ public class VGet {
                                     targetDir = dinfo.targetFile.getParentFile();
                                 dinfo.targetFile = null;
                                 AtomicBoolean conflict = new AtomicBoolean(false);
-                                targetFile(dinfo, getExt(dinfo), conflict);
+                                targetFile(videoInfo, dinfo, getExt(dinfo), conflict);
                                 if ( conflict.get() ) {
                                     dinfo.targetFile = null;
-                                    targetFile(dinfo, getContentExt(dinfo), conflict);
+                                    targetFile(videoInfo, dinfo, getContentExt(dinfo), conflict);
                                 }
                             }
                             directV = new DirectRange(dinfo, dinfo.targetFile);
@@ -561,10 +535,10 @@ public class VGet {
                         final Runnable r = () -> {
                             switch ( dinfo.getState() ) {
                                 case DOWNLOADING:
-                                    info.setState(VideoInfo.States.DOWNLOADING);
+                                    videoInfo.setState(VideoInfo.States.DOWNLOADING);
                                     break;
                                 case RETRYING:
-                                    info.setRetrying(dinfo.getRetry(), dinfo.getDelay(), dinfo.getException());
+                                    videoInfo.setRetrying(dinfo.getRetry(), dinfo.getDelay(), dinfo.getException());
                                     break;
                                 default:
                                     // we can safely skip all statues.
@@ -626,27 +600,27 @@ public class VGet {
                         throw new DownloadInterruptedError(e);
                     }
 
-                    info.setState(VideoInfo.States.DONE);
+                    videoInfo.setState(VideoInfo.States.DONE);
                     // break while()
                     return;
                 } catch ( DownloadRetry | DownloadIOError e ) {
-                    retry(user, stop, e);
+                    retry(videoInfo, stop, e);
                 } catch ( DownloadMultipartError e ) {
                     checkFileNotFound(e);
                     checkRetry(e);
-                    retry(user, stop, e);
+                    retry(videoInfo, stop, e);
                 } catch ( DownloadIOCodeError e ) {
                     if ( retry(e) )
-                        retry(user, stop, e);
+                        retry(videoInfo, stop, e);
                     else
                         throw e;
                 }
             }
         } catch ( DownloadInterruptedError e ) {
-            info.setState(VideoInfo.States.STOP, e);
+            videoInfo.setState(VideoInfo.States.STOP, e);
             throw e;
         } catch ( RuntimeException e ) {
-            info.setState(VideoInfo.States.ERROR, e);
+            videoInfo.setState(VideoInfo.States.ERROR, e);
             throw e;
         }
     }

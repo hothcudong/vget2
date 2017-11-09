@@ -23,7 +23,7 @@ public class SimpleExtractor extends PatternBasedExtractor {
     public String extract(String url) {
         Matcher matcher = pattern.matcher(url);
 
-        if ( matcher.matches() ) {
+        if ( matcher.find() ) {
             return matcher.group(1);
         } else {
             return nextHandler.extract(url);

@@ -19,14 +19,12 @@ public class App {
 
     public static void main(String[] args) {
         // ex: http://www.youtube.com/watch?v=Nj6PFaDmp6c
-        String url = args[0];
         // ex: /Users/axet/Downloads/
         File path = new File(args[1]);
-
         try {
             final AtomicBoolean stop = new AtomicBoolean(false);
 
-            URL web = new URL(url);
+            URL url = new URL(args[0]);
 
             // [OPTIONAL] limit maximum quality, or do not call this function if
             // you wish maximum quality available.
@@ -37,7 +35,7 @@ public class App {
             // create proper html parser depends on url
             ServiceProvider provider = new ServiceProvider();
 
-            Parser parser = provider.getParserForUrl(web);
+            Parser parser = provider.getParserForUrl(url);
 
             // download limited video quality from youtube
             // parser = new YouTubeQParser(YoutubeQuality.p480);
@@ -46,13 +44,11 @@ public class App {
             // parser = new YouTubeMPGParser();
 
             // create proper videoinfo to keep specific video information
-            VideoInfo videoinfo = provider.getInfoForUrl(web);
-
-            VGet v = new VGet(web, path);
+            VGet v = new VGet(url, path);
 
             // [OPTIONAL] call v.extract() only if you d like to get video title
             // or download url link before start download. or just skip it.
-            v.extract(parser, stop);
+            VideoInfo videoinfo = v.extract(url, stop);
 
             System.out.println("Title: " + videoinfo.getTitle());
             List<VideoFileInfo> list = videoinfo.getInfo();
@@ -67,7 +63,7 @@ public class App {
                 }
             }
 
-            v.download(parser);
+            v.download(videoinfo);
         } catch (RuntimeException e) {
             throw e;
         } catch (Exception e) {

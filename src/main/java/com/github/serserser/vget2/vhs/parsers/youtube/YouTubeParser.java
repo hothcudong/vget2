@@ -2,7 +2,6 @@ package com.github.serserser.vget2.vhs.parsers.youtube;
 
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.*;
@@ -10,7 +9,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.github.serserser.vget2.exceptions.DownloadEmptyTitle;
 import com.github.serserser.vget2.info.Parser;
 import com.github.serserser.vget2.info.VideoFileInfo;
 import com.github.serserser.vget2.info.VideoInfo;
@@ -23,6 +21,7 @@ import com.github.serserser.vget2.vhs.exceptions.VideoUnavailablePlayer;
 import com.github.serserser.vget2.vhs.parsers.youtube.extract.DecryptingExtractor;
 import com.github.serserser.vget2.vhs.parsers.youtube.extract.PatternBasedExtractor;
 import com.github.serserser.vget2.vhs.parsers.youtube.extract.SimpleExtractor;
+import com.github.serserser.vget2.vhs.parsers.youtube.util.Regex;
 import com.github.serserser.vget2.vhs.youtube.YoutubeITags;
 import com.github.serserser.vget2.vhs.youtube.YoutubeVideoDownload;
 import com.github.serserser.vget2.vhs.youtube.params.*;
@@ -53,16 +52,18 @@ public class YouTubeParser extends Parser {
 
         List<YoutubeVideoDownload> audios = new ArrayList<>();
 
+
         for ( int i = videos.size() - 1; i >= 0; i-- ) {
             if ( videos.get(i).getStream() == null ) {
                 videos.remove(i);
-            } else if ( (videos.get(i).getStream() instanceof AudioStream) ) {
+            } else if ( (videos.get(i).getStream() instanceof StreamAudio) ) { // TODO: [jgolda] add posibility to download specific stream type: audio only, video only or combined
                 audios.add(videos.remove(i));
             }
         }
 
         videos.sort(new YoutubeVideoContentFirstComparator());
         audios.sort(new YoutubeVideoContentFirstComparator());
+        // TODO: [jgolda] tutaj lista wszystkich formatów danego video - to warto wyciągnąć gdzieś na zewnątrz!!!
 
         for ( int i = 0; i < videos.size(); ) {
             YoutubeVideoDownload v = videos.get(i);
@@ -118,7 +119,7 @@ public class YouTubeParser extends Parser {
             List<YoutubeVideoDownload> sNextVideoURL = new ArrayList<>();
 
             try {
-                sNextVideoURL.addAll(streamCapture(info, stop));
+                sNextVideoURL.addAll(streamCapture(info));
             } catch ( DownloadError e ) {
                 try {
                     sNextVideoURL.addAll(extractEmbedded(info, stop));
@@ -134,15 +135,162 @@ public class YouTubeParser extends Parser {
         }
     }
 
-    private List<YoutubeVideoDownload> streamCapture(final YouTubeInfo info, final AtomicBoolean stop) throws Exception {
+    private List<YoutubeVideoDownload> streamCapture(final YouTubeInfo info) throws Exception {
         List<YoutubeVideoDownload> sNextVideoURL = new ArrayList<>();
 
-        String html;
-        html = WGet.getHtml(info.getWeb());
-        sNextVideoURL.addAll(extractHtmlInfo(info, html, stop));
+        String html = WGet.getHtml(info.getWeb());
+        sNextVideoURL.addAll(extractHtmlInfo(info, html));
         extractIcon(info, html);
 
         return sNextVideoURL;
+    }
+
+    private List<YoutubeVideoDownload> extractHtmlInfo(YouTubeInfo info, String html) throws Exception {
+
+        List<YoutubeVideoDownload> sNextVideoURL = new ArrayList<>();
+
+        Regex.builder()
+                .inputString(html)
+                .pattern("(verify_age)")
+                .find()
+                .thenThrow(AgeException::new);
+
+        Regex.builder()
+                .inputString(html)
+                .pattern("(unavailable-player)")
+                .find()
+                .thenThrow(VideoUnavailablePlayer::new);
+
+
+        Regex.builder()
+                .inputString(html)
+                .pattern("(//.*?/player-[\\w\\d\\-]+\\/.*\\.js)")
+                .find()
+                .thenExecute((matcher) -> info.setPlayerURIString("https:" + matcher.group(1)));
+
+        boolean isUrlEncoded = Regex.builder()
+                .inputString(html)
+                .pattern("\"url_encoded_fmt_stream_map\":\"([^\"]*)\"")
+                .found();
+
+
+
+        // combined streams
+        {
+            Pattern urlencod = Pattern.compile("\"url_encoded_fmt_stream_map\":\"([^\"]*)\"");
+            Matcher urlencodMatch = urlencod.matcher(html);
+            if ( urlencodMatch.find() ) {
+                String url_encoded_fmt_stream_map;
+                url_encoded_fmt_stream_map = urlencodMatch.group(1);
+
+                // normal embedded video, unable to grab age restricted videos
+                Pattern encod = Pattern.compile("url=(.*)");
+                Matcher encodMatch = encod.matcher(url_encoded_fmt_stream_map);
+                if ( encodMatch.find() ) {
+                    String sline = encodMatch.group(1);
+
+                    sNextVideoURL.addAll(extractUrlEncodedVideos(sline));
+                }
+
+                // stream video
+                Pattern encodStream = Pattern.compile("stream=(.*)");
+                Matcher encodStreamMatch = encodStream.matcher(url_encoded_fmt_stream_map);
+                if ( encodStreamMatch.find() ) {
+                    String sline = encodStreamMatch.group(1);
+
+                    String[] urlStrings = sline.split("stream=");
+
+                    for ( String urlString : urlStrings ) {
+                        urlString = StringEscapeUtils.unescapeJava(urlString);
+
+                        Pattern link = Pattern.compile("(sparams.*)&itag=(\\d+)&.*&conn=rtmpe(.*),");
+                        Matcher linkMatch = link.matcher(urlString);
+                        if ( linkMatch.find() ) {
+
+                            String sparams = linkMatch.group(1);
+                            String itag = linkMatch.group(2);
+                            String url = linkMatch.group(3);
+
+                            url = "https" + url + "?" + sparams;
+
+                            url = URLDecoder.decode(url, WGet.UTF8);
+
+                            sNextVideoURL.add(filter(itag, new URL(url)));
+                        }
+                    }
+                }
+            }
+        }
+
+        // separate streams
+        {
+            Pattern urlencod = Pattern.compile("\"adaptive_fmts\":\\s*\"([^\"]*)\"");
+            Matcher urlencodMatch = urlencod.matcher(html);
+            if ( urlencodMatch.find() ) {
+                String url_encoded_fmt_stream_map;
+                url_encoded_fmt_stream_map = urlencodMatch.group(1);
+
+                // normal embedded video, unable to grab age restricted videos
+                Pattern encod = Pattern.compile("url=(.*)");
+                Matcher encodMatch = encod.matcher(url_encoded_fmt_stream_map);
+                if ( encodMatch.find() ) {
+                    String sline = encodMatch.group(1);
+
+                    sNextVideoURL.addAll(extractUrlEncodedVideos(sline));
+                }
+
+                // stream video
+                Pattern encodStream = Pattern.compile("stream=(.*)");
+                Matcher encodStreamMatch = encodStream.matcher(url_encoded_fmt_stream_map);
+                if ( encodStreamMatch.find() ) {
+                    String sline = encodStreamMatch.group(1);
+
+                    String[] urlStrings = sline.split("stream=");
+
+                    for ( String urlString : urlStrings ) {
+                        urlString = StringEscapeUtils.unescapeJava(urlString);
+
+                        Pattern link = Pattern.compile("(sparams.*)&itag=(\\d+)&.*&conn=rtmpe(.*),");
+                        Matcher linkMatch = link.matcher(urlString);
+                        if ( linkMatch.find() ) {
+
+                            String sparams = linkMatch.group(1);
+                            String itag = linkMatch.group(2);
+                            String url = linkMatch.group(3);
+
+                            url = "https" + url + "?" + sparams;
+
+                            url = URLDecoder.decode(url, WGet.UTF8);
+
+                            sNextVideoURL.add(filter(itag, new URL(url)));
+                        }
+                    }
+                }
+            }
+        }
+
+        String title = Regex.builder()
+                .inputString(html)
+                .pattern("<meta name=\"title\" content=(.*)")
+                .group(1)
+                .map(ttl -> ttl.replaceFirst("<meta name=\"title\" content=", "").trim())
+                .map(ttl -> StringUtils.strip(ttl, "\">"))
+                .map(StringEscapeUtils::unescapeHtml4)
+                .orElse("EMPTY TITLE");
+
+        info.setTitle(title);
+
+        return sNextVideoURL;
+    }
+
+    private void extractIcon(VideoInfo info, String html) throws MalformedURLException {
+        Pattern titlePattern = Pattern.compile("itemprop=\"thumbnailUrl\" href=\"(.*)\"");
+        Matcher titleMatcher = titlePattern.matcher(html);
+        if ( titleMatcher.find() ) {
+            String sline = titleMatcher.group(1);
+            sline = StringEscapeUtils.unescapeHtml4(sline);
+            info.setIcon(new URL(sline));
+        }
     }
 
     /**
@@ -240,22 +388,6 @@ public class YouTubeParser extends Parser {
         return sNextVideoURL;
     }
 
-    private void extractIcon(VideoInfo info, String html) {
-        try {
-            Pattern title = Pattern.compile("itemprop=\"thumbnailUrl\" href=\"(.*)\"");
-            Matcher titleMatch = title.matcher(html);
-            if ( titleMatch.find() ) {
-                String sline = titleMatch.group(1);
-                sline = StringEscapeUtils.unescapeHtml4(sline);
-                info.setIcon(new URL(sline));
-            }
-        } catch ( RuntimeException e ) {
-            throw e;
-        } catch ( Exception e ) {
-            throw new RuntimeException(e);
-        }
-    }
-
     private static Map<String, String> getQueryMap(String qs) {
         try {
             HashMap<String, String> map = new HashMap<>();
@@ -272,145 +404,6 @@ public class YouTubeParser extends Parser {
         }
     }
 
-    private List<YoutubeVideoDownload> extractHtmlInfo(YouTubeInfo info, String html, AtomicBoolean stop) throws Exception {
-
-        List<YoutubeVideoDownload> sNextVideoURL = new ArrayList<>();
-
-        {
-            Pattern age = Pattern.compile("(verify_age)");
-            Matcher ageMatch = age.matcher(html);
-            if ( ageMatch.find() )
-                throw new AgeException();
-        }
-
-        {
-            Pattern age = Pattern.compile("(unavailable-player)");
-            Matcher ageMatch = age.matcher(html);
-            if ( ageMatch.find() )
-                throw new VideoUnavailablePlayer();
-        }
-
-        // grab html5 player url
-        {
-            Pattern playerURL = Pattern.compile("(//.*?/player-[\\w\\d\\-]+\\/.*\\.js)");
-            Matcher playerVersionMatch = playerURL.matcher(html);
-            if ( playerVersionMatch.find() ) {
-                info.setPlayerURI(new URI("https:" + playerVersionMatch.group(1)));
-            }
-        }
-
-        // combined streams
-        {
-            Pattern urlencod = Pattern.compile("\"url_encoded_fmt_stream_map\":\"([^\"]*)\"");
-            Matcher urlencodMatch = urlencod.matcher(html);
-            if ( urlencodMatch.find() ) {
-                String url_encoded_fmt_stream_map;
-                url_encoded_fmt_stream_map = urlencodMatch.group(1);
-
-                // normal embedded video, unable to grab age restricted videos
-                Pattern encod = Pattern.compile("url=(.*)");
-                Matcher encodMatch = encod.matcher(url_encoded_fmt_stream_map);
-                if ( encodMatch.find() ) {
-                    String sline = encodMatch.group(1);
-
-                    sNextVideoURL.addAll(extractUrlEncodedVideos(sline));
-                }
-
-                // stream video
-                Pattern encodStream = Pattern.compile("stream=(.*)");
-                Matcher encodStreamMatch = encodStream.matcher(url_encoded_fmt_stream_map);
-                if ( encodStreamMatch.find() ) {
-                    String sline = encodStreamMatch.group(1);
-
-                    String[] urlStrings = sline.split("stream=");
-
-                    for ( String urlString : urlStrings ) {
-                        urlString = StringEscapeUtils.unescapeJava(urlString);
-
-                        Pattern link = Pattern.compile("(sparams.*)&itag=(\\d+)&.*&conn=rtmpe(.*),");
-                        Matcher linkMatch = link.matcher(urlString);
-                        if ( linkMatch.find() ) {
-
-                            String sparams = linkMatch.group(1);
-                            String itag = linkMatch.group(2);
-                            String url = linkMatch.group(3);
-
-                            url = "https" + url + "?" + sparams;
-
-                            url = URLDecoder.decode(url, WGet.UTF8);
-
-                            sNextVideoURL.add(filter(itag, new URL(url)));
-                        }
-                    }
-                }
-            }
-        }
-
-        // separate streams
-        {
-            Pattern urlencod = Pattern.compile("\"adaptive_fmts\":\\s*\"([^\"]*)\"");
-            Matcher urlencodMatch = urlencod.matcher(html);
-            if ( urlencodMatch.find() ) {
-                String url_encoded_fmt_stream_map;
-                url_encoded_fmt_stream_map = urlencodMatch.group(1);
-
-                // normal embedded video, unable to grab age restricted videos
-                Pattern encod = Pattern.compile("url=(.*)");
-                Matcher encodMatch = encod.matcher(url_encoded_fmt_stream_map);
-                if ( encodMatch.find() ) {
-                    String sline = encodMatch.group(1);
-
-                    sNextVideoURL.addAll(extractUrlEncodedVideos(sline));
-                }
-
-                // stream video
-                Pattern encodStream = Pattern.compile("stream=(.*)");
-                Matcher encodStreamMatch = encodStream.matcher(url_encoded_fmt_stream_map);
-                if ( encodStreamMatch.find() ) {
-                    String sline = encodStreamMatch.group(1);
-
-                    String[] urlStrings = sline.split("stream=");
-
-                    for ( String urlString : urlStrings ) {
-                        urlString = StringEscapeUtils.unescapeJava(urlString);
-
-                        Pattern link = Pattern.compile("(sparams.*)&itag=(\\d+)&.*&conn=rtmpe(.*),");
-                        Matcher linkMatch = link.matcher(urlString);
-                        if ( linkMatch.find() ) {
-
-                            String sparams = linkMatch.group(1);
-                            String itag = linkMatch.group(2);
-                            String url = linkMatch.group(3);
-
-                            url = "https" + url + "?" + sparams;
-
-                            url = URLDecoder.decode(url, WGet.UTF8);
-
-                            sNextVideoURL.add(filter(itag, new URL(url)));
-                        }
-                    }
-                }
-            }
-        }
-
-        {
-            Pattern title = Pattern.compile("<meta name=\"title\" content=(.*)");
-            Matcher titleMatch = title.matcher(html);
-            if ( titleMatch.find() ) {
-                String sline = titleMatch.group(1);
-                String name = sline.replaceFirst("<meta name=\"title\" content=", "").trim();
-                name = StringUtils.strip(name, "\">");
-                name = StringEscapeUtils.unescapeHtml4(name);
-                info.setTitle(name);
-            }
-        }
-        if ( info.getTitle() == null ) {
-            throw new DownloadEmptyTitle("Empty title"); // some times youtube return strange html, cause this error
-        }
-
-        return sNextVideoURL;
-    }
-
     private List<YoutubeVideoDownload> extractUrlEncodedVideos(String sline) throws Exception {
         String[] urlStrings = sline.split("url=");
 
@@ -423,9 +416,17 @@ public class YouTubeParser extends Parser {
 
             // universal request
 
-            String url = SimpleExtractor.ofPattern("([^&,]*)[&,]").extract(urlString);
+            String url = URLDecoder.decode(Regex.builder()
+                    .pattern("([^&,]*)[&,]")
+                    .inputString(urlString)
+                    .group(1)
+                    .orElse(""), "UTF-8");
 
-            String itag = SimpleExtractor.ofPattern("itag=(\\d+)").extract(urlFull);
+            String itag = Regex.builder()
+                    .pattern("itag=(\\d+)")
+                    .inputString(urlFull)
+                    .group(1)
+                    .orElse(null);
 
             String sig = extractSignature(urlFull);
 
